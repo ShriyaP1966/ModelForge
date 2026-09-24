@@ -16,10 +16,19 @@ app = FastAPI(
     description="ModelForge: AI Model Evolution Lab - A free-first machine-learning experimentation platform"
 )
 
-# Enable CORS for frontend
+# CORS: explicit local dev origins rather than "*". This is a single-user,
+# local-only app -- the frontend is always Vite, either the dev server
+# (default port 5173) or `vite preview` (default port 4173) -- so there's no
+# reason to accept requests claiming to come from anywhere else. Also, "*"
+# combined with allow_credentials=True isn't even valid per the CORS spec.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:4173",
+        "http://127.0.0.1:4173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

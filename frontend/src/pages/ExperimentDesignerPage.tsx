@@ -231,8 +231,9 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-slate-400 font-semibold mb-1">Experiment Name</label>
+              <label htmlFor="exp-name" className="block text-slate-400 font-semibold mb-1">Experiment Name</label>
               <input
+                id="exp-name"
                 type="text"
                 required
                 value={name}
@@ -242,11 +243,12 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
             </div>
 
             <div>
-              <label className="block text-slate-400 font-semibold mb-1 flex items-center gap-1">
+              <label htmlFor="exp-lineage-parent" className="block text-slate-400 font-semibold mb-1 flex items-center gap-1">
                 <GitFork className="w-3.5 h-3.5 text-emerald-400" />
                 Lineage Parent (Derive From)
               </label>
               <select
+                id="exp-lineage-parent"
                 value={selectedParentId || ''}
                 onChange={(e) => setSelectedParentId(e.target.value ? Number(e.target.value) : undefined)}
                 className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:outline-none focus:border-emerald-500"
@@ -262,8 +264,9 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
           </div>
 
           <div>
-            <label className="block text-slate-400 font-semibold mb-1">Experiment Description (Hypothesis)</label>
+            <label htmlFor="exp-description" className="block text-slate-400 font-semibold mb-1">Experiment Description (Hypothesis)</label>
             <input
+              id="exp-description"
               type="text"
               placeholder="e.g., Testing if MinMax scaling and Random Forest improve minority recall..."
               value={description}
@@ -281,8 +284,9 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-slate-400 font-semibold mb-1">Target Column</label>
+              <label htmlFor="exp-target-column" className="block text-slate-400 font-semibold mb-1">Target Column</label>
               <select
+                id="exp-target-column"
                 required
                 value={targetColumn}
                 onChange={(e) => setTargetColumn(e.target.value)}
@@ -297,8 +301,9 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
             </div>
 
             <div>
-              <label className="block text-slate-400 font-semibold mb-1">Candidate Model</label>
+              <label htmlFor="exp-model-type" className="block text-slate-400 font-semibold mb-1">Candidate Model</label>
               <select
+                id="exp-model-type"
                 required
                 value={modelType}
                 onChange={(e) => handleModelTypeChange(e.target.value)}
@@ -327,8 +332,9 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
             </div>
 
             <div>
-              <label className="block text-slate-400 font-semibold mb-1">Primary Metric</label>
+              <label htmlFor="exp-primary-metric" className="block text-slate-400 font-semibold mb-1">Primary Metric</label>
               <select
+                id="exp-primary-metric"
                 required
                 value={primaryMetric}
                 onChange={(e) => setPrimaryMetric(e.target.value)}
@@ -363,8 +369,9 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
               {(modelType.includes('forest') || modelType.includes('gradient_boosting')) && (
                 <>
                   <div>
-                    <label className="text-slate-500 block text-[10px]">n_estimators</label>
+                    <label htmlFor="hp-n-estimators" className="text-slate-500 block text-[10px]">n_estimators</label>
                     <input
+                      id="hp-n-estimators"
                       type="number"
                       min={10}
                       max={500}
@@ -376,8 +383,9 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="text-slate-500 block text-[10px]">max_depth</label>
+                    <label htmlFor="hp-max-depth" className="text-slate-500 block text-[10px]">max_depth</label>
                     <input
+                      id="hp-max-depth"
                       type="number"
                       min={1}
                       max={50}
@@ -393,8 +401,9 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
 
               {(modelType === 'logistic_regression' || modelType === 'svm') && (
                 <div>
-                  <label className="text-slate-500 block text-[10px]">C (Regularization)</label>
+                  <label htmlFor="hp-c" className="text-slate-500 block text-[10px]">C (Regularization)</label>
                   <input
+                    id="hp-c"
                     type="number"
                     step="0.1"
                     min="0.01"
@@ -409,8 +418,9 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
 
               {(modelType === 'ridge' || modelType === 'lasso') && (
                 <div>
-                  <label className="text-slate-500 block text-[10px]">alpha (Penalty)</label>
+                  <label htmlFor="hp-alpha" className="text-slate-500 block text-[10px]">alpha (Penalty)</label>
                   <input
+                    id="hp-alpha"
                     type="number"
                     step="0.1"
                     min="0.01"
@@ -425,8 +435,9 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
 
               {modelType === 'knn' && (
                 <div>
-                  <label className="text-slate-500 block text-[10px]">n_neighbors</label>
+                  <label htmlFor="hp-n-neighbors" className="text-slate-500 block text-[10px]">n_neighbors</label>
                   <input
+                    id="hp-n-neighbors"
                     type="number"
                     min={1}
                     max={50}
@@ -450,8 +461,9 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-slate-400 font-semibold mb-1">Missing Value Imputation</label>
+              <label htmlFor="exp-imputer" className="block text-slate-400 font-semibold mb-1">Missing Value Imputation</label>
               <select
+                id="exp-imputer"
                 value={imputerStrategy}
                 onChange={(e) => setImputerStrategy(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:outline-none focus:border-emerald-500"
@@ -463,8 +475,9 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
             </div>
 
             <div>
-              <label className="block text-slate-400 font-semibold mb-1">Numerical Scaling</label>
+              <label htmlFor="exp-scaler" className="block text-slate-400 font-semibold mb-1">Numerical Scaling</label>
               <select
+                id="exp-scaler"
                 value={scaler}
                 onChange={(e) => setScaler(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:outline-none focus:border-emerald-500"
@@ -477,8 +490,9 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
             </div>
 
             <div>
-              <label className="block text-slate-400 font-semibold mb-1">Categorical Encoding</label>
+              <label htmlFor="exp-encoder" className="block text-slate-400 font-semibold mb-1">Categorical Encoding</label>
               <select
+                id="exp-encoder"
                 value={encoder}
                 onChange={(e) => setEncoder(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:outline-none focus:border-emerald-500"
@@ -550,10 +564,11 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-slate-400 font-semibold">Validation Split Size</label>
+                <label htmlFor="exp-test-size" className="text-slate-400 font-semibold">Validation Split Size</label>
                 <span className="font-mono text-white font-bold">{(testSize * 100).toFixed(0)}% Test</span>
               </div>
               <input
+                id="exp-test-size"
                 type="range"
                 min="0.1"
                 max="0.4"
@@ -565,10 +580,11 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
             </div>
 
             <div>
-              <label className="block text-slate-400 font-semibold mb-1">
+              <label htmlFor="exp-random-seed" className="block text-slate-400 font-semibold mb-1">
                 Random Seed (Reproducibility Lock)
               </label>
               <input
+                id="exp-random-seed"
                 type="number"
                 value={randomSeed}
                 onChange={(e) => setRandomSeed(parseInt(e.target.value))}
@@ -577,10 +593,11 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-slate-400 font-semibold mb-1">
+              <label htmlFor="exp-cv-folds" className="block text-slate-400 font-semibold mb-1">
                 Cross-Validation (Additional to the split above)
               </label>
               <select
+                id="exp-cv-folds"
                 value={crossValidationFolds}
                 onChange={(e) => setCrossValidationFolds(parseInt(e.target.value))}
                 className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:outline-none focus:border-emerald-500"
