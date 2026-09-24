@@ -7,7 +7,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, OneHotEncoder, OrdinalEncoder, LabelEncoder
-from sklearn.model_selection import train_test_split, KFold, StratifiedKFold, cross_val_score
+from sklearn.model_selection import train_test_split, KFold, StratifiedKFold, cross_val_score, learning_curve
 from sklearn.linear_model import LogisticRegression, LinearRegression, Ridge, Lasso
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
@@ -202,6 +202,19 @@ class MLPipelineEngine:
 
         return X, y, numeric_features, categorical_features, label_encoder
 
+    @staticmethod
+    def _json_safe_round(value: float, digits: int = 4) -> Optional[float]:
+        """Rounds a float for JSON output, converting NaN/inf to None. Both
+        cross_val_score and learning_curve default to error_score=nan for a
+        degenerate fold (e.g. a training slice too small/imbalanced to fit) --
+        that's a silent NaN in the result array, not a raised exception, so it
+        would otherwise reach json.dumps() as a bare `NaN` token, which is not
+        valid JSON and breaks JSON.parse() on the frontend.
+        """
+        if value is None or not np.isfinite(value):
+            return None
+        return round(float(value), digits)
+
     @classmethod
     def _compute_cross_validation(
         cls,
@@ -279,17 +292,28 @@ class MLPipelineEngine:
             )
             cv_pipeline = Pipeline(steps=[("preprocessor", cv_preprocessor), ("model", cv_estimator)])
 
-            scores = cross_val_score(cv_pipeline, X, y, cv=splitter, scoring=scoring)
+            scores = cross_val_score(cv_pipeline, X, y, cv=splitter, scoring=scoring, error_score=np.nan)
             if scoring.startswith("neg_"):
                 scores = -scores
+
+            if np.all(np.isnan(scores)):
+                return {
+                    "requested_folds": requested_folds,
+                    "effective_folds": effective_folds,
+                    "metric": primary_metric,
+                    "scores": [],
+                    "mean": None,
+                    "std": None,
+                    "error": "Every fold failed to fit (likely too few rows per class for this fold count)."
+                }
 
             return {
                 "requested_folds": requested_folds,
                 "effective_folds": effective_folds,
                 "metric": primary_metric,
-                "scores": [round(float(s), 4) for s in scores],
-                "mean": round(float(np.mean(scores)), 4),
-                "std": round(float(np.std(scores)), 4),
+                "scores": [cls._json_safe_round(s) for s in scores],
+                "mean": cls._json_safe_round(np.nanmean(scores)),
+                "std": cls._json_safe_round(np.nanstd(scores)),
                 "error": None
             }
         except Exception as e:
@@ -302,6 +326,98 @@ class MLPipelineEngine:
                 "std": None,
                 "error": f"Cross-validation failed: {e}"
             }
+
+    @classmethod
+    def _compute_learning_curve(
+        cls,
+        X: pd.DataFrame,
+        y: np.ndarray,
+        task_type: str,
+        model_type: str,
+        hyperparameters: Dict[str, Any],
+        preprocessing_config: Dict[str, Any],
+        num_features: List[str],
+        cat_features: List[str],
+        primary_metric: str,
+        random_seed: int
+    ) -> Optional[Dict[str, Any]]:
+        """Computes a train-size-vs-score learning curve for the primary metric,
+        using a small fixed 3-fold split and 5 train-size fractions -- kept
+        deliberately cheap (unlike cross-validation, this isn't user-configurable)
+        since it runs automatically for every experiment, the same way the
+        confusion matrix or feature importances do. Never raises: returns None
+        on any failure (dataset too small, unsupported metric, ...) so a
+        learning curve that can't be computed simply doesn't show up, rather
+        than failing the experiment.
+        """
+        try:
+            scoring_map = cls.CLASSIFICATION_CV_SCORING if task_type == "classification" else cls.REGRESSION_CV_SCORING
+            scoring = scoring_map.get(primary_metric.lower())
+            if not scoring or len(X) < 20:
+                return None
+
+            if task_type == "classification":
+                min_class_count = int(pd.Series(y).value_counts().min())
+                folds = min(3, min_class_count)
+                splitter = StratifiedKFold(n_splits=folds, shuffle=True, random_state=random_seed) if folds >= 2 else None
+            else:
+                folds = min(3, len(X))
+                splitter = KFold(n_splits=folds, shuffle=True, random_state=random_seed) if folds >= 2 else None
+
+            if splitter is None:
+                return None
+
+            lc_preprocessor = cls.create_preprocessor(
+                numeric_features=num_features,
+                categorical_features=cat_features,
+                imputer_strategy=preprocessing_config.get("imputer_strategy", "mean"),
+                scaler_type=preprocessing_config.get("scaler", "standard"),
+                encoder_type=preprocessing_config.get("encoder", "onehot")
+            )
+            lc_estimator = cls.build_estimator(
+                task_type=task_type,
+                model_type=model_type,
+                hyperparameters=hyperparameters,
+                random_seed=random_seed
+            )
+            lc_pipeline = Pipeline(steps=[("preprocessor", lc_preprocessor), ("model", lc_estimator)])
+
+            train_sizes_abs, train_scores, val_scores = learning_curve(
+                lc_pipeline, X, y,
+                cv=splitter,
+                train_sizes=np.linspace(0.2, 1.0, 5),
+                scoring=scoring,
+                error_score=np.nan
+            )
+
+            if scoring.startswith("neg_"):
+                train_scores = -train_scores
+                val_scores = -val_scores
+
+            # Small train-size fractions can leave too few rows (or too few
+            # rows of one class) to fit at all -- that fold comes back as NaN
+            # rather than raising, per sklearn's default error_score=nan.
+            # nanmean/nanstd salvage whatever folds did succeed at each train
+            # size; _json_safe_round turns a point where every fold failed
+            # into `null` rather than a raw NaN, which isn't valid JSON.
+            with np.errstate(invalid="ignore"):
+                train_means = np.nanmean(train_scores, axis=1)
+                train_stds = np.nanstd(train_scores, axis=1)
+                val_means = np.nanmean(val_scores, axis=1)
+                val_stds = np.nanstd(val_scores, axis=1)
+
+            return {
+                "metric": primary_metric,
+                "folds": folds,
+                "train_sizes": [int(n) for n in train_sizes_abs],
+                "train_scores_mean": [cls._json_safe_round(x) for x in train_means],
+                "train_scores_std": [cls._json_safe_round(x) for x in train_stds],
+                "val_scores_mean": [cls._json_safe_round(x) for x in val_means],
+                "val_scores_std": [cls._json_safe_round(x) for x in val_stds],
+                "error": None
+            }
+        except Exception:
+            return None
 
     @classmethod
     def train_and_evaluate(
@@ -403,6 +519,22 @@ class MLPipelineEngine:
             random_seed=random_seed
         )
 
+        # Learning curve (train-size vs score), computed automatically for
+        # every experiment -- same tier as the confusion matrix or feature
+        # importances above, not an opt-in setting like cross-validation.
+        lc_result = cls._compute_learning_curve(
+            X=X,
+            y=y,
+            task_type=task_type,
+            model_type=model_type,
+            hyperparameters=hyperparameters,
+            preprocessing_config=preprocessing_config,
+            num_features=num_features,
+            cat_features=cat_features,
+            primary_metric=primary_metric,
+            random_seed=random_seed
+        )
+
         # Save model artifact if requested
         saved_model_path = None
         if artifact_save_dir:
@@ -426,7 +558,8 @@ class MLPipelineEngine:
             "cat_features": cat_features,
             "transformed_feature_names": feature_names,
             "feature_importances": feature_importances,
-            "cross_validation": cv_result
+            "cross_validation": cv_result,
+            "learning_curve": lc_result
         }
 
     @staticmethod

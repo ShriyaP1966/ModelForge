@@ -10,6 +10,7 @@ from app.schemas.schemas import (
 )
 from app.services.experiment_manager import ExperimentManager
 from app.services.visualization_service import VisualizationService
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -76,11 +77,42 @@ def create_experiment(
     db.commit()
     db.refresh(exp)
 
-    # Execute synchronously so the user receives complete results immediately,
-    # or handle within fast interactive loop
-    ExperimentManager.run_experiment(db=db, experiment_id=exp.id)
-    db.refresh(exp)
+    # Runs after this response is sent, on its own DB session (this request's
+    # session closes as soon as this handler returns). This is what makes
+    # cancellation meaningful at all: the client gets the experiment id back
+    # immediately, while it's still queued/running, instead of only finding
+    # out once training has already finished.
+    background_tasks.add_task(
+        ExperimentManager.run_experiment_background,
+        exp.id,
+        settings.EXPERIMENT_TIMEOUT_SECONDS
+    )
 
+    return exp
+
+@router.post("/{experiment_id}/cancel", response_model=ExperimentResponse)
+def cancel_experiment(experiment_id: int, db: Session = Depends(get_db)):
+    exp = db.query(Experiment).filter(Experiment.id == experiment_id).first()
+    if not exp:
+        raise HTTPException(status_code=404, detail="Experiment not found")
+    if exp.status not in ("queued", "running"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Experiment #{experiment_id} is already '{exp.status}'; nothing to cancel."
+        )
+
+    # Best-effort in-memory signal (the common case: the run is actually
+    # tracked in this process). Combined, unconditionally, with a race-safe
+    # conditional DB update so a "queued"/"running" experiment is never left
+    # stuck even without a live handle -- and so this can't ever clobber a
+    # status the background run already moved past by the time this commits.
+    ExperimentManager.cancel_experiment(experiment_id)
+    db.query(Experiment).filter(
+        Experiment.id == experiment_id,
+        Experiment.status.in_(["queued", "running"])
+    ).update({"status": "cancelled", "error_message": "Cancelled by user."})
+    db.commit()
+    db.refresh(exp)
     return exp
 
 @router.get("/project/{project_id}", response_model=List[ExperimentResponse])

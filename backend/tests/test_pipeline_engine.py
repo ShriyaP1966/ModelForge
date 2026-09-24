@@ -147,3 +147,70 @@ def test_cross_validation_reports_unsupported_metric_without_crashing(regression
     assert cv is not None
     assert cv["error"] is not None
     assert cv["mean"] is None
+
+
+def test_learning_curve_computed_by_default_with_json_safe_values():
+    """Learning curves run automatically (like the confusion matrix or
+    feature importances), not gated behind a setting. All aggregated values
+    must be JSON-safe (finite float or null) -- see the NaN regression test
+    below for why that isn't automatic."""
+    np.random.seed(7)
+    n = 80
+    df = pd.DataFrame({
+        "num_feature": np.random.randn(n),
+        "target": np.random.choice(["yes", "no"], size=n)
+    })
+    res = MLPipelineEngine.train_and_evaluate(
+        df=df,
+        target_column="target",
+        task_type="classification",
+        model_type="logistic_regression",
+        hyperparameters={},
+        preprocessing_config={"scaler": "standard", "imputer_strategy": "mean"},
+        test_size=0.2,
+        random_seed=42,
+        primary_metric="f1"
+    )
+    lc = res["learning_curve"]
+    assert lc is not None
+    assert lc["error"] is None
+    assert len(lc["train_sizes"]) == 5
+    assert len(lc["train_scores_mean"]) == 5
+    assert len(lc["val_scores_mean"]) == 5
+    for arr in (lc["train_scores_mean"], lc["train_scores_std"], lc["val_scores_mean"], lc["val_scores_std"]):
+        for v in arr:
+            assert v is None or (isinstance(v, float) and np.isfinite(v))
+
+
+def test_learning_curve_and_cross_validation_never_emit_raw_nan():
+    """Regression test: sklearn's cross_val_score/learning_curve default to
+    error_score=nan for a fold too small/imbalanced to fit (e.g. the smallest
+    train-size slice ending up single-class), rather than raising. That NaN
+    previously flowed straight through round(float(x), 4) into the JSON
+    response as a bare `NaN` token -- not valid JSON, and something
+    json.loads() (and a browser's JSON.parse()) rejects outright. Every
+    reported value must now be either a finite float or null."""
+    import json
+
+    df = pd.DataFrame({"x1": list(range(20)), "target": [0, 1] * 10})
+    res = MLPipelineEngine.train_and_evaluate(
+        df=df,
+        target_column="target",
+        task_type="classification",
+        model_type="logistic_regression",
+        hyperparameters={},
+        preprocessing_config={"scaler": "standard", "imputer_strategy": "mean", "encoder": "onehot"},
+        feature_columns=["x1"],
+        test_size=0.2,
+        random_seed=42,
+        cross_validation_folds=3,
+        primary_metric="f1"
+    )
+
+    # The real proof: this must round-trip through json.dumps/json.loads
+    # without raising and without producing a NaN literal anywhere.
+    serialized = json.dumps({"cv": res["cross_validation"], "lc": res["learning_curve"]})
+    assert "NaN" not in serialized
+    parsed = json.loads(serialized)
+    assert parsed["cv"] is not None
+    assert parsed["lc"] is not None

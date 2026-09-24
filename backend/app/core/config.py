@@ -19,6 +19,13 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
 
+    # Computation safety (Phase 5): simple, student-laptop-appropriate caps.
+    # A row limit bounds worst-case training time at the source; a timeout is
+    # the backstop for whatever a row cap alone can't predict (e.g. SVM with
+    # probability=True, or a high cross-validation fold count).
+    MAX_DATASET_ROWS: int = 50000
+    EXPERIMENT_TIMEOUT_SECONDS: int = 300
+
     class Config:
         env_file = ".env"
         extra = "allow"

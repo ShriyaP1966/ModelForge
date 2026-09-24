@@ -1,4 +1,5 @@
 import time
+import threading
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
 import pandas as pd
@@ -8,20 +9,84 @@ from app.services.dataset_analyzer import calculate_file_sha256, load_dataset
 from app.services.pipeline_engine import MLPipelineEngine
 from app.services.evaluation_engine import EvaluationEngine
 from app.core.config import settings
+from app.db.session import SessionLocal
 
 class ExperimentManager:
     """Manages experiment creation, background execution, persistence, and lineage tracking."""
+
+    # Process-local registry of in-flight experiments' cancel signals, keyed
+    # by experiment id. A plain dict is sufficient here (single-process,
+    # student-laptop app, no multi-worker deployment) -- this is deliberately
+    # not backed by any external queue/broker.
+    _cancel_events: Dict[int, threading.Event] = {}
+    _timers: Dict[int, threading.Timer] = {}
+    _registry_lock = threading.Lock()
+
+    @classmethod
+    def run_experiment_background(cls, experiment_id: int, timeout_seconds: int) -> None:
+        """Entry point scheduled via FastAPI's BackgroundTasks after the create
+        response has already been sent. Owns its own DB session (the request's
+        session is closed by the time this runs) and a cancel_event that both
+        a manual /cancel call and a wall-clock timeout can signal.
+        """
+        cancel_event = threading.Event()
+        timer = threading.Timer(timeout_seconds, cancel_event.set)
+        timer.daemon = True
+
+        with cls._registry_lock:
+            cls._cancel_events[experiment_id] = cancel_event
+            cls._timers[experiment_id] = timer
+        timer.start()
+
+        db = SessionLocal()
+        try:
+            cls.run_experiment(db=db, experiment_id=experiment_id, cancel_event=cancel_event)
+        finally:
+            db.close()
+            timer.cancel()
+            with cls._registry_lock:
+                cls._cancel_events.pop(experiment_id, None)
+                cls._timers.pop(experiment_id, None)
+
+    @classmethod
+    def cancel_experiment(cls, experiment_id: int) -> bool:
+        """Best-effort signal to an in-flight run. Returns True if a live
+        handle was found and signaled. The caller (the /cancel endpoint) also
+        applies a race-safe conditional DB update regardless of this return
+        value, so a queued/running experiment is never left stuck even if no
+        in-memory handle exists (e.g. after a process restart)."""
+        with cls._registry_lock:
+            cancel_event = cls._cancel_events.get(experiment_id)
+        if cancel_event:
+            cancel_event.set()
+            return True
+        return False
 
     @classmethod
     def run_experiment(
         cls,
         db: Session,
-        experiment_id: int
+        experiment_id: int,
+        cancel_event: Optional[threading.Event] = None
     ) -> Experiment:
-        """Executes an experiment, records its metrics, artifacts, and updates status."""
+        """Executes an experiment, records its metrics, artifacts, and updates status.
+
+        Cancellation is checkpoint-based, not preemptive: scikit-learn's fit()
+        can't be safely interrupted mid-call, so cancel_event is checked (a)
+        before any work starts, in case it was cancelled while still queued,
+        and (b) right after training/evaluation finish but before anything is
+        persisted. Either way, an experiment only ever ends up fully completed
+        (with consistent metrics/artifacts) or cleanly cancelled (with none)
+        -- never a partial mix of the two.
+        """
         exp = db.query(Experiment).filter(Experiment.id == experiment_id).first()
         if not exp:
             raise ValueError(f"Experiment {experiment_id} not found.")
+
+        if exp.status == "cancelled" or (cancel_event and cancel_event.is_set()):
+            # Already cancelled before this run ever got to start (e.g. the
+            # user cancelled while it was still queued behind other work).
+            return exp
 
         dataset = db.query(Dataset).filter(Dataset.id == exp.dataset_id).first()
         if not dataset:
@@ -80,6 +145,21 @@ class ExperimentManager:
                     y_val_pred=pipeline_result["y_val_pred"]
                 )
 
+            # Checkpoint: training/evaluation just finished, but nothing has
+            # been persisted yet. If cancelled (via the in-memory event, or
+            # directly in the DB by a /cancel request that arrived before an
+            # in-memory handle existed), discard these results entirely
+            # rather than writing a "completed" experiment the user asked to
+            # stop -- and never a partial write of only some metrics.
+            db.refresh(exp)
+            if (cancel_event and cancel_event.is_set()) or exp.status == "cancelled":
+                exp.status = "cancelled"
+                exp.error_message = exp.error_message or "Cancelled by user."
+                exp.duration_ms = int((time.time() - start_time) * 1000)
+                db.commit()
+                db.refresh(exp)
+                return exp
+
             # 5. Persist Metrics
             # Clear existing metrics for this experiment if any
             db.query(ExperimentMetric).filter(ExperimentMetric.experiment_id == exp.id).delete()
@@ -125,6 +205,16 @@ class ExperimentManager:
                     experiment_id=exp.id,
                     artifact_type="cross_validation",
                     data=pipeline_result["cross_validation"]
+                ))
+
+            # Learning curve (train-size vs score), computed automatically
+            # like the other model diagnostics below -- absent if the
+            # dataset was too small or the primary metric has no CV scorer.
+            if pipeline_result.get("learning_curve"):
+                db.add(ExperimentArtifact(
+                    experiment_id=exp.id,
+                    artifact_type="learning_curve",
+                    data=pipeline_result["learning_curve"]
                 ))
 
             # Confusion matrix / curves / residuals

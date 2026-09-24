@@ -10,6 +10,8 @@ import { FeatureImportanceChart } from '../components/FeatureImportanceChart';
 import { PipelineVisualizer } from '../components/PipelineVisualizer';
 import { AIExplanationModal } from '../components/AIExplanationModal';
 import { CrossValidationSummary } from '../components/CrossValidationSummary';
+import { ResidualScatterPlot } from '../components/ResidualScatterPlot';
+import { LearningCurveChart } from '../components/LearningCurveChart';
 import { formatModelName, formatMetric } from '../utils/formatting';
 import {
   ArrowLeft,
@@ -19,10 +21,15 @@ import {
   GitCompare,
   CheckCircle2,
   AlertCircle,
+  XCircle,
+  StopCircle,
   Cpu,
   Layers,
   Fingerprint,
 } from 'lucide-react';
+
+const RUNNING_STATUSES = new Set(['queued', 'running']);
+const POLL_INTERVAL_MS = 800;
 
 interface ExperimentDetailPageProps {
   experimentId: number;
@@ -40,6 +47,8 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
   const [experiment, setExperiment] = useState<Experiment | null>(null);
   const [pipelineGraph, setPipelineGraph] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
+  const [nowTick, setNowTick] = useState(() => Date.now());
 
   // Reproducibility
   const [reproducing, setReproducing] = useState(false);
@@ -69,6 +78,43 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
   useEffect(() => {
     loadData();
   }, [experimentId]);
+
+  // Training now runs in the background: while an experiment is still
+  // queued/running, poll for its settled state instead of assuming the
+  // initial load already reflects the final result. The pipeline graph is
+  // also refetched on the transition to a terminal state, since its
+  // "Evaluation" node depends on metrics that don't exist yet mid-run.
+  useEffect(() => {
+    if (!experiment || !RUNNING_STATUSES.has(experiment.status)) return;
+
+    const interval = setInterval(async () => {
+      setNowTick(Date.now());
+      try {
+        const fresh = await api.getExperiment(experimentId);
+        setExperiment(fresh);
+        if (!RUNNING_STATUSES.has(fresh.status)) {
+          const graphData = await api.getPipelineGraph(experimentId);
+          setPipelineGraph(graphData);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }, POLL_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [experiment?.status, experimentId]);
+
+  const handleCancel = async () => {
+    setCancelling(true);
+    try {
+      const updated = await api.cancelExperiment(experimentId);
+      setExperiment(updated);
+    } catch (err: any) {
+      alert(`Cancel failed: ${err.message}`);
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   const handleReproduce = async () => {
     setReproducing(true);
@@ -113,9 +159,17 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
   const overfitArtifact = experiment.artifacts.find((a) => a.artifact_type === 'overfitting');
   const residualArtifact = experiment.artifacts.find((a) => a.artifact_type === 'residuals');
   const cvArtifact = experiment.artifacts.find((a) => a.artifact_type === 'cross_validation');
+  const learningCurveArtifact = experiment.artifacts.find((a) => a.artifact_type === 'learning_curve');
 
   const valMetrics = experiment.metrics.filter((m) => m.split === 'val');
   const trainMetrics = experiment.metrics.filter((m) => m.split === 'train');
+
+  const isRunning = RUNNING_STATUSES.has(experiment.status);
+  const isFailed = experiment.status === 'failed';
+  const isCancelled = experiment.status === 'cancelled';
+  const elapsedSeconds = isRunning
+    ? Math.max(0, Math.round((nowTick - new Date(experiment.created_at).getTime()) / 1000))
+    : null;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -131,7 +185,18 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
 
         {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-2.5">
-          {experiment.parent_id && (
+          {isRunning && (
+            <button
+              onClick={handleCancel}
+              disabled={cancelling}
+              className="inline-flex items-center px-3.5 py-1.5 rounded-xl text-xs font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/40 transition-all disabled:opacity-50"
+            >
+              <StopCircle className="w-3.5 h-3.5 mr-1.5" />
+              {cancelling ? 'Cancelling...' : 'Cancel Experiment'}
+            </button>
+          )}
+
+          {!isRunning && experiment.parent_id && (
             <button
               onClick={() => onNavigateCompare(experiment.parent_id!, experiment.id)}
               className="inline-flex items-center px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all"
@@ -141,6 +206,7 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
             </button>
           )}
 
+          {!isRunning && (
           <button
             onClick={handleExplainAI}
             className="inline-flex items-center px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all"
@@ -148,7 +214,9 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
             <Sparkles className="w-3.5 h-3.5 mr-1.5 text-teal-400" />
             AI Explanation
           </button>
+          )}
 
+          {!isRunning && (
           <button
             onClick={handleReproduce}
             disabled={reproducing}
@@ -157,7 +225,9 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
             <RotateCcw className={`w-3.5 h-3.5 mr-1.5 text-sky-400 ${reproducing ? 'animate-spin' : ''}`} />
             {reproducing ? 'Reproducing Run...' : 'Reproduce Experiment'}
           </button>
+          )}
 
+          {!isRunning && (
           <button
             onClick={() => onNavigateNewBranch(experiment.id)}
             className="inline-flex items-center px-4 py-1.5 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/20 transition-all active:scale-95"
@@ -165,6 +235,7 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
             <GitFork className="w-3.5 h-3.5 mr-1 stroke-[2.5]" />
             Branch Child Experiment
           </button>
+          )}
         </div>
       </div>
 
@@ -257,7 +328,46 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
         )}
       </div>
 
+      {/* Running / Queued State */}
+      {isRunning && (
+        <div className="p-8 rounded-2xl bg-slate-900 border border-sky-500/30 flex flex-col items-center text-center space-y-3">
+          <RotateCcw className="w-8 h-8 text-sky-400 animate-spin" />
+          <h3 className="text-base font-bold text-white">
+            {experiment.status === 'queued' ? 'Queued — starting shortly...' : 'Training in progress...'}
+          </h3>
+          <p className="text-xs text-slate-400 max-w-md">
+            Fitting {formatModelName(experiment.model_type)} on the configured pipeline. This page updates
+            automatically — no need to refresh.
+          </p>
+          <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-slate-950 border border-slate-800 text-slate-300">
+            Elapsed: {elapsedSeconds}s
+          </span>
+        </div>
+      )}
+
+      {/* Failed / Cancelled State */}
+      {(isFailed || isCancelled) && (
+        <div className={`p-6 rounded-2xl border flex items-start gap-3 ${
+          isFailed ? 'bg-rose-950/20 border-rose-500/40 text-rose-300' : 'bg-slate-900 border-slate-700 text-slate-300'
+        }`}>
+          {isFailed ? (
+            <XCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+          ) : (
+            <StopCircle className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
+          )}
+          <div>
+            <h3 className="font-bold text-sm mb-1">
+              {isFailed ? 'Experiment Failed' : 'Experiment Cancelled'}
+            </h3>
+            <p className="text-xs leading-relaxed opacity-90 font-mono">
+              {experiment.error_message || (isFailed ? 'An unknown error occurred during training.' : 'Cancelled before completion.')}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Validation Metrics Cards */}
+      {valMetrics.length > 0 && (
       <div className="space-y-3">
         <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
           Validation Performance Metrics
@@ -277,6 +387,7 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
           })}
         </div>
       </div>
+      )}
 
       {/* Overfitting Diagnostic Banner */}
       {overfitArtifact && (
@@ -294,6 +405,7 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
       )}
 
       {/* Interactive Pipeline Visualizer */}
+      {!isRunning && (
       <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
@@ -305,6 +417,17 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
 
         <PipelineVisualizer pipelineData={pipelineGraph} />
       </div>
+      )}
+
+      {/* Learning Curve */}
+      {learningCurveArtifact && (
+        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+            Learning Curve (Score vs. Training Set Size)
+          </h2>
+          <LearningCurveChart result={learningCurveArtifact.data} />
+        </div>
+      )}
 
       {/* Model Visuals: Confusion Matrix, ROC/PR Curves, Feature Importances */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -343,19 +466,7 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
               Residual Analysis (Predicted vs Actual)
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2 text-xs font-mono max-h-60 overflow-y-auto">
-              {residualArtifact.data?.residuals?.map((r: any, idx: number) => (
-                <div key={idx} className="p-2 rounded bg-slate-950 border border-slate-800">
-                  <div className="flex justify-between text-slate-400 text-[10px]">
-                    <span>Act: {r.actual}</span>
-                    <span>Pred: {r.predicted}</span>
-                  </div>
-                  <div className="mt-1 font-bold text-emerald-400 text-right">
-                    Δ {r.residual > 0 ? `+${r.residual}` : r.residual}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <ResidualScatterPlot residuals={residualArtifact.data?.residuals} />
           </div>
         )}
       </div>

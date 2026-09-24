@@ -91,6 +91,23 @@ export interface CrossValidationResult {
   error: string | null;
 }
 
+export interface LearningCurveResult {
+  metric: string;
+  folds: number;
+  train_sizes: number[];
+  train_scores_mean: (number | null)[];
+  train_scores_std: (number | null)[];
+  val_scores_mean: (number | null)[];
+  val_scores_std: (number | null)[];
+  error: string | null;
+}
+
+export interface ResidualPoint {
+  actual: number;
+  predicted: number;
+  residual: number;
+}
+
 export interface Experiment {
   id: number;
   project_id: number;

@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
+from app.core import config as config_module
 
 client = TestClient(app)
 
@@ -85,7 +86,7 @@ def _upload_dataset(project_id, filename="data.csv"):
     return res.json()["id"]
 
 def _create_experiment(project_id, dataset_id, parent_id=None, name="Exp"):
-    return client.post("/api/experiments/", json={
+    res = client.post("/api/experiments/", json={
         "project_id": project_id,
         "dataset_id": dataset_id,
         "parent_id": parent_id,
@@ -94,6 +95,15 @@ def _create_experiment(project_id, dataset_id, parent_id=None, name="Exp"):
         "target_column": "target",
         "primary_metric": "f1"
     })
+    if res.status_code != 200:
+        return res
+    # Training now runs via BackgroundTasks rather than inline, so the create
+    # response itself only reflects the "queued" snapshot taken before that
+    # task ran. TestClient executes background tasks synchronously before
+    # client.post() returns control here, so a follow-up GET reliably sees
+    # the settled (completed/failed) state -- this keeps every existing
+    # assertion on status/metrics/artifacts working unchanged.
+    return client.get(f"/api/experiments/{res.json()['id']}")
 
 def test_experiment_rejects_dataset_from_different_project():
     proj_a = _create_project("Cross-Project Dataset Test A")
@@ -173,8 +183,12 @@ def test_lineage_does_not_drop_completed_child_of_non_completed_parent():
     proj = _create_project("Lineage Orphan Test")
     ds = _upload_dataset(proj)
 
-    # Force a failed parent run via an unsupported model type.
-    failed_parent = client.post("/api/experiments/", json={
+    # Force a failed parent run via an unsupported model type. Training runs
+    # via BackgroundTasks, which TestClient executes synchronously before
+    # client.post() returns -- so a follow-up GET reliably sees the settled
+    # "failed" status rather than the "queued" snapshot the create response
+    # itself captured.
+    create_res = client.post("/api/experiments/", json={
         "project_id": proj,
         "dataset_id": ds,
         "name": "Failed baseline",
@@ -182,7 +196,8 @@ def test_lineage_does_not_drop_completed_child_of_non_completed_parent():
         "target_column": "target",
         "primary_metric": "f1"
     })
-    assert failed_parent.status_code == 200
+    assert create_res.status_code == 200
+    failed_parent = client.get(f"/api/experiments/{create_res.json()['id']}")
     parent_data = failed_parent.json()
     assert parent_data["status"] == "failed"
     parent_id = parent_data["id"]
@@ -217,5 +232,41 @@ def test_diff_allows_experiments_from_same_project():
 
     res = client.get(f"/api/experiments/{exp_a['id']}/diff/{exp_b['id']}")
     assert res.status_code == 200
+
+    client.delete(f"/api/projects/{proj}")
+
+
+def test_dataset_upload_rejects_datasets_over_the_row_limit(monkeypatch):
+    """Computation-safety guard: a dataset larger than MAX_DATASET_ROWS is
+    rejected at upload time (the natural place to bound worst-case training
+    time at the source) with a clear, actionable error -- and the oversized
+    file is cleaned up, not left orphaned on disk."""
+    monkeypatch.setattr(config_module.settings, "MAX_DATASET_ROWS", 5)
+
+    proj = _create_project("Row Limit Test")
+    csv_content = "a,b,target\n" + "\n".join(f"{i},{i*2},{i % 2}" for i in range(10))
+    files = {"file": ("too_big.csv", csv_content, "text/csv")}
+    res = client.post(f"/api/datasets/upload?project_id={proj}", files=files)
+
+    assert res.status_code == 400
+    assert "row" in res.json()["detail"].lower()
+
+    # Nothing should have been persisted for the rejected upload.
+    listing = client.get(f"/api/datasets/project/{proj}")
+    assert listing.json() == []
+
+    client.delete(f"/api/projects/{proj}")
+
+
+def test_dataset_upload_accepts_datasets_within_the_row_limit(monkeypatch):
+    monkeypatch.setattr(config_module.settings, "MAX_DATASET_ROWS", 5)
+
+    proj = _create_project("Row Limit Within Bounds Test")
+    csv_content = "a,b,target\n1,2,0\n3,4,1\n5,6,0\n"
+    files = {"file": ("small.csv", csv_content, "text/csv")}
+    res = client.post(f"/api/datasets/upload?project_id={proj}", files=files)
+
+    assert res.status_code == 200
+    assert res.json()["row_count"] == 3
 
     client.delete(f"/api/projects/{proj}")

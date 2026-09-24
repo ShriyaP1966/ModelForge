@@ -38,6 +38,18 @@ async def upload_dataset(
             os.remove(file_path)
         raise HTTPException(status_code=400, detail=f"Failed to parse uploaded dataset: {str(e)}")
 
+    if len(df) > settings.MAX_DATASET_ROWS:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Dataset has {len(df)} rows, exceeding the {settings.MAX_DATASET_ROWS}-row limit for this "
+                f"local instance. ModelForge is designed to run comfortably on a normal student laptop; "
+                f"try sampling or trimming your dataset before uploading."
+            )
+        )
+
     sha256 = calculate_file_sha256(file_path)
     analysis = DatasetAnalyzer.analyze(df, target_candidate=target_column)
 

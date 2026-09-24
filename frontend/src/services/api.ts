@@ -74,6 +74,8 @@ export const api = {
     }),
   deleteExperiment: (id: number) =>
     fetchJson<{ message: string }>(`/experiments/${id}`, { method: 'DELETE' }),
+  cancelExperiment: (id: number) =>
+    fetchJson<Experiment>(`/experiments/${id}/cancel`, { method: 'POST' }),
   getLineage: (projectId: number) =>
     fetchJson<LineageNode[]>(`/experiments/project/${projectId}/lineage`),
   getEvolution: (projectId: number) =>
