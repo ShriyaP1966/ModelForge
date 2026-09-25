@@ -21,6 +21,9 @@
 [![Live Demo](https://img.shields.io/badge/Live_Demo-View_App-4CAF50?style=for-the-badge)](https://modelforge-frontend-sgbp.onrender.com)
 [![API Docs](https://img.shields.io/badge/API_Docs-Swagger_UI-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)](https://modelforge-backend-xbr6.onrender.com/docs)
 
+**🔗 Live Demo:** https://modelforge-frontend-sgbp.onrender.com<br>
+**📘 API Docs:** https://modelforge-backend-xbr6.onrender.com/docs
+
 *The free Render backend sleeps after periods of inactivity, so the first load can take ~30–60 seconds while it spins back up.*
 
 **[Features](#features) · [Architecture](#architecture) · [Tech Stack](#tech-stack) · [Quick Start](#quick-start) · [Deployment](#deployment)**
@@ -45,24 +48,6 @@ ModelForge turns tabular datasets into reproducible sequences of controlled expe
 - **Pre-Training Dataset Intelligence**: Transparent Health Score (0-100), automated data leakage alerts, IQR outlier detection, and correlation matrices.
 - **Interactive Visuals**: Missing-value heatmaps, confusion matrices, ROC/PR curves, feature importance, dynamic pipeline visualizer, and step-by-step experiment replay.
 - **Free-First & Offline**: Runs entirely on a standard student laptop with local open-source tools. The AI assistant uses an intelligent deterministic scientific engine by default, requiring no paid APIs.
-
-<div align="right"><a href="#top">⬆ Back to top</a></div>
-
----
-
-## 📸 Screenshots
-
-<!-- TODO(ShriyaP1966): drop the real screenshots into docs/screenshots/ using these
-     exact filenames (dashboard.png, dataset-health.png, experiment-diff.png,
-     lineage.png) and this section will render them automatically. -->
-
-| Dashboard | Dataset Health |
-|---|---|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Dataset Health](docs/screenshots/dataset-health.png) |
-
-| Experiment Diff | Lineage DAG |
-|---|---|
-| ![Experiment Diff](docs/screenshots/experiment-diff.png) | ![Lineage](docs/screenshots/lineage.png) |
 
 <div align="right"><a href="#top">⬆ Back to top</a></div>
 
