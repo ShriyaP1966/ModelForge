@@ -13,13 +13,12 @@ services:
       # Set this after the frontend is deployed, to its public URL
       # (e.g. https://modelforge-frontend.onrender.com), then redeploy.
       - key: CORS_ORIGINS
-        value: ""
+        sync: false
 
   # React/Vite frontend, built as a static site
   - type: web
     name: modelforge-frontend
     runtime: static
-    plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
@@ -27,7 +26,7 @@ services:
       # Set this to the backend's public URL + /api (e.g.
       # https://modelforge-backend.onrender.com/api), then redeploy.
       - key: VITE_API_BASE_URL
-        value: ""
+        sync: false
     routes:
       - type: rewrite
         source: /*
