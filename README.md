@@ -2,6 +2,8 @@
 
 > **"See how your machine-learning model evolves."**
 
+**Live demo:** _deploying — link will be added here once the Render services are up._
+
 A free-first, portfolio-grade machine-learning experimentation platform designed for **AI Tools + AI System Design** coursework.
 
 ModelForge turns tabular datasets into reproducible sequences of controlled experiments, making pipeline evolution, experiment lineage, and metric shifts transparent and tangible.
@@ -149,6 +151,22 @@ Located in `sample_data/`:
 1. `classification_titanic.csv`: Mixed types, missing ages/embarked, survival target.
 2. `regression_housing.csv`: California housing market with geographic & socioeconomic features.
 3. `problematic_dataset.csv`: Stress-test dataset containing synthetic target leaks, duplicate rows, constant zero-variance features, and 95:5 class imbalance.
+
+---
+
+## ☁️ Deploying to Render
+
+This repo includes a [`render.yaml`](render.yaml) Blueprint that provisions two free-tier services: a Python web service for the FastAPI backend and a static site for the React/Vite frontend.
+
+1. Sign in to [Render](https://render.com) with the `ShriyaP1966` GitHub account.
+2. **New +** → **Blueprint** → select the `ModelForge` repo. Render detects `render.yaml` and creates `modelforge-backend` and `modelforge-frontend`.
+3. Wait for both services to finish their first deploy, then copy each one's public URL (shown on its Render dashboard page).
+4. Wire them together (one-time, since each URL is only known after the other exists):
+   - On **modelforge-frontend** → Environment, set `VITE_API_BASE_URL` to the backend URL + `/api` (e.g. `https://modelforge-backend.onrender.com/api`), then trigger a redeploy.
+   - On **modelforge-backend** → Environment, set `CORS_ORIGINS` to the frontend URL (e.g. `https://modelforge-frontend.onrender.com`), then trigger a redeploy.
+5. Open the frontend URL — that's the live app.
+
+**Note:** the free plan uses ephemeral disk, so the SQLite database resets on redeploy or after the service spins down from inactivity. Fine for a demo/portfolio deployment; real persistence would need a paid instance with a Render persistent disk attached.
 
 ---
 

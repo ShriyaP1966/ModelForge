@@ -9,7 +9,10 @@ import {
   AIExplainResponse
 } from '../types';
 
-const BASE_URL = '/api';
+// In local dev, Vite proxies '/api' to the backend (see vite.config.ts).
+// In production, the frontend and backend are deployed as separate
+// services, so VITE_API_BASE_URL points at the backend's public URL.
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${url}`, options);

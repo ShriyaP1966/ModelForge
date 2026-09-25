@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
 
+    # Comma-separated extra CORS origins (e.g. a deployed frontend's URL),
+    # appended to the local dev origins hardcoded in main.py.
+    CORS_ORIGINS: str = ""
+
     # Computation safety (Phase 5): simple, student-laptop-appropriate caps.
     # A row limit bounds worst-case training time at the source; a timeout is
     # the backstop for whatever a row cap alone can't predict (e.g. SVM with

@@ -21,6 +21,8 @@ app = FastAPI(
 # (default port 5173) or `vite preview` (default port 4173) -- so there's no
 # reason to accept requests claiming to come from anywhere else. Also, "*"
 # combined with allow_credentials=True isn't even valid per the CORS spec.
+extra_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -28,6 +30,7 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:4173",
         "http://127.0.0.1:4173",
+        *extra_origins,
     ],
     allow_credentials=True,
     allow_methods=["*"],
