@@ -107,13 +107,12 @@ describe('ExperimentDesignerPage (critical form: run an experiment)', () => {
     await waitFor(() => expect(onExperimentCreated).toHaveBeenCalledWith(42));
   });
 
-  it('requires at least one feature to remain selected', async () => {
+  it('requires at least one feature to remain selected, shown as an inline error', async () => {
     (api.getProject as any).mockResolvedValue(project);
     (api.getProjectDatasets as any).mockResolvedValue([dataset]);
     (api.getProjectExperiments as any).mockResolvedValue([]);
 
     const user = userEvent.setup();
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
     render(<ExperimentDesignerPage projectId={1} onBack={() => {}} onExperimentCreated={() => {}} />);
 
@@ -126,7 +125,8 @@ describe('ExperimentDesignerPage (critical form: run an experiment)', () => {
     }
     await user.click(checkboxes[0]);
 
-    expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('at least one predictive feature'));
-    alertSpy.mockRestore();
+    expect(await screen.findByText(/at least one predictive feature/i)).toBeInTheDocument();
+    // The rejected toggle must not have gone through -- the last feature stays checked.
+    expect(checkboxes[0].checked).toBe(true);
   });
 });

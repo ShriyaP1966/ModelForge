@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import { CorrelationHeatmap } from '../components/CorrelationHeatmap';
 import { MissingValueHeatmap } from '../components/MissingValueHeatmap';
 import { FeatureDistributionChart } from '../components/FeatureDistributionChart';
+import { ErrorBanner } from '../components/ErrorBanner';
 import {
   ArrowLeft,
   Database,
@@ -37,6 +38,7 @@ export const DatasetIntelligencePage: React.FC<DatasetIntelligencePageProps> = (
   const [uploading, setUploading] = useState(false);
   const [selectedTarget, setSelectedTarget] = useState<string>('');
   const [distColumnName, setDistColumnName] = useState<string>('');
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const loadData = async (target?: string) => {
     try {
@@ -90,6 +92,7 @@ export const DatasetIntelligencePage: React.FC<DatasetIntelligencePageProps> = (
     if (!file || !dataset) return;
 
     setUploading(true);
+    setUploadError(null);
     try {
       const newDs = await api.uploadDataset(dataset.project_id, file);
       if (onDatasetUpdated) {
@@ -98,9 +101,10 @@ export const DatasetIntelligencePage: React.FC<DatasetIntelligencePageProps> = (
         loadData();
       }
     } catch (err: any) {
-      alert(`Upload failed: ${err.message}`);
+      setUploadError(err.message || 'Upload failed.');
     } finally {
       setUploading(false);
+      e.target.value = ''; // allow re-selecting the same file after a failure
     }
   };
 
@@ -129,6 +133,8 @@ export const DatasetIntelligencePage: React.FC<DatasetIntelligencePageProps> = (
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <ErrorBanner message={uploadError} onDismiss={() => setUploadError(null)} />
+
       {/* Header & Breadcrumb */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2 text-xs text-slate-400">

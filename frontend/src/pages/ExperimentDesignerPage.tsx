@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Project, Dataset, Experiment } from '../types';
 import { api } from '../services/api';
 import { formatModelName } from '../utils/formatting';
+import { ErrorBanner } from '../components/ErrorBanner';
 import {
   ArrowLeft,
   Sliders,
@@ -33,6 +34,7 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
   const [experiments, setExperiments] = useState<Experiment[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Form States
   const [name, setName] = useState('');
@@ -143,7 +145,7 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
   const handleToggleFeature = (feat: string) => {
     if (selectedFeatures.includes(feat)) {
       if (selectedFeatures.length === 1) {
-        alert('You must retain at least one predictive feature.');
+        setFormError('You must retain at least one predictive feature.');
         return;
       }
       setSelectedFeatures(selectedFeatures.filter((f) => f !== feat));
@@ -154,8 +156,9 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     if (!dataset || !targetColumn) {
-      alert('Valid dataset and target column required.');
+      setFormError('Valid dataset and target column required.');
       return;
     }
 
@@ -184,7 +187,7 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
 
       onExperimentCreated(exp.id);
     } catch (err: any) {
-      alert(`Experiment execution failed: ${err.message}`);
+      setFormError(err.message || 'Experiment execution failed.');
     } finally {
       setSubmitting(false);
     }
@@ -221,6 +224,8 @@ export const ExperimentDesignerPage: React.FC<ExperimentDesignerPageProps> = ({
           All transforms are strictly fit on the training split to eliminate data leakage.
         </p>
       </div>
+
+      <ErrorBanner message={formError} onDismiss={() => setFormError(null)} />
 
       <form onSubmit={handleSubmit} className="space-y-6 text-xs">
         {/* Basic Experiment Info */}

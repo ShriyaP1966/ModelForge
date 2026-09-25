@@ -69,6 +69,23 @@ def test_target_suggestions_rank_last_column_above_cardinality_heuristic():
     result = DatasetAnalyzer.analyze(df)
     assert result["potential_targets"][0] == "outcome_value"
 
+def test_target_suggestions_rank_exact_name_match_above_substring_match():
+    """Regression test found during final end-to-end QA: the bundled
+    problematic_dataset.csv has columns in the order
+    ...,leakage_label_copy,fraud -- both matched the name-heuristic tier
+    (leakage_label_copy only because it contains "label" as a substring),
+    so the stable sort's column-order tiebreak let the simulated leakage
+    column win over the real target just because it appears first. An
+    exact keyword match ("fraud") must outrank a mere substring match
+    ("leakage_label_copy" containing "label"), regardless of column order."""
+    df = pd.DataFrame({
+        "transaction_id": [f"TX_{i}" for i in range(20)],
+        "leakage_label_copy": [0, 1] * 10,  # appears first, substring match on "label"
+        "fraud": [0, 1] * 10,               # appears second, exact match
+    })
+    result = DatasetAnalyzer.analyze(df)
+    assert result["potential_targets"][0] == "fraud"
+
 def test_analyze_numeric_column_includes_histogram_for_distribution_chart():
     df = pd.DataFrame({
         "age": [22, 25, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70],

@@ -12,6 +12,7 @@ import { AIExplanationModal } from '../components/AIExplanationModal';
 import { CrossValidationSummary } from '../components/CrossValidationSummary';
 import { ResidualScatterPlot } from '../components/ResidualScatterPlot';
 import { LearningCurveChart } from '../components/LearningCurveChart';
+import { ErrorBanner } from '../components/ErrorBanner';
 import { formatModelName, formatMetric } from '../utils/formatting';
 import {
   ArrowLeft,
@@ -48,16 +49,19 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
   const [pipelineGraph, setPipelineGraph] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const [nowTick, setNowTick] = useState(() => Date.now());
 
   // Reproducibility
   const [reproducing, setReproducing] = useState(false);
   const [reproResult, setReproResult] = useState<ReproduceResponse | null>(null);
+  const [reproduceError, setReproduceError] = useState<string | null>(null);
 
   // AI Explanation
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [aiExplanation, setAiExplanation] = useState<AIExplainResponse | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
@@ -106,11 +110,12 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
 
   const handleCancel = async () => {
     setCancelling(true);
+    setCancelError(null);
     try {
       const updated = await api.cancelExperiment(experimentId);
       setExperiment(updated);
     } catch (err: any) {
-      alert(`Cancel failed: ${err.message}`);
+      setCancelError(err.message || 'Cancel failed.');
     } finally {
       setCancelling(false);
     }
@@ -118,11 +123,12 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
 
   const handleReproduce = async () => {
     setReproducing(true);
+    setReproduceError(null);
     try {
       const res = await api.reproduceExperiment(experimentId, 1e-4);
       setReproResult(res);
     } catch (err: any) {
-      alert(`Reproduce failed: ${err.message}`);
+      setReproduceError(err.message || 'Reproduce failed.');
     } finally {
       setReproducing(false);
     }
@@ -133,11 +139,12 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
     if (aiExplanation) return;
 
     setLoadingAi(true);
+    setAiError(null);
     try {
       const res = await api.explainExperiment(experimentId);
       setAiExplanation(res);
     } catch (err: any) {
-      alert(`AI explanation failed: ${err.message}`);
+      setAiError(err.message || 'AI explanation failed.');
     } finally {
       setLoadingAi(false);
     }
@@ -173,6 +180,9 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <ErrorBanner message={cancelError} onDismiss={() => setCancelError(null)} />
+      <ErrorBanner message={reproduceError} onDismiss={() => setReproduceError(null)} />
+
       {/* Header & Breadcrumb */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2 text-xs text-slate-400">
@@ -477,6 +487,7 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
         onClose={() => setIsAiModalOpen(false)}
         explanation={aiExplanation}
         loading={loadingAi}
+        error={aiError}
         experimentName={experiment.name}
       />
     </div>

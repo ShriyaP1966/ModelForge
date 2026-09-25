@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Experiment, ExperimentDiffResponse } from '../types';
 import { api } from '../services/api';
 import { ExperimentDiffView } from '../components/ExperimentDiffView';
+import { ErrorBanner } from '../components/ErrorBanner';
 import { formatModelName } from '../utils/formatting';
 import { ArrowLeft, GitCompare, RotateCcw } from 'lucide-react';
 
@@ -24,6 +25,7 @@ export const CompareExperimentsPage: React.FC<CompareExperimentsPageProps> = ({
   const [diffData, setDiffData] = useState<ExperimentDiffResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [diffLoading, setDiffLoading] = useState(false);
+  const [diffError, setDiffError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadExperiments = async () => {
@@ -55,11 +57,13 @@ export const CompareExperimentsPage: React.FC<CompareExperimentsPageProps> = ({
 
   const fetchDiff = async (a: number, b: number) => {
     setDiffLoading(true);
+    setDiffError(null);
     try {
       const res = await api.getDiff(a, b);
       setDiffData(res);
     } catch (err: any) {
-      alert(`Diff calculation failed: ${err.message}`);
+      setDiffData(null);
+      setDiffError(err.message || 'Diff calculation failed.');
     } finally {
       setDiffLoading(false);
     }
@@ -85,6 +89,8 @@ export const CompareExperimentsPage: React.FC<CompareExperimentsPageProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <ErrorBanner message={diffError} onDismiss={() => setDiffError(null)} />
+
       {/* Header & Back */}
       <div className="flex items-center space-x-2 text-xs text-slate-400">
         <button onClick={onBack} className="hover:text-white flex items-center gap-1 font-semibold">
@@ -110,13 +116,15 @@ export const CompareExperimentsPage: React.FC<CompareExperimentsPageProps> = ({
         {/* Experiment Pickers */}
         <div className="pt-3 border-t border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
           <div>
-            <label className="block text-slate-400 font-semibold mb-1">
+            <label htmlFor="diff-exp-a" className="block text-slate-400 font-semibold mb-1">
               Experiment A (Baseline / Previous):
             </label>
             <select
+              id="diff-exp-a"
               value={expAId}
+              disabled={diffLoading}
               onChange={(e) => handleSelectA(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:outline-none focus:border-emerald-500"
+              className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:outline-none focus:border-emerald-500 disabled:opacity-50"
             >
               {experiments.map((e) => (
                 <option key={e.id} value={e.id}>
@@ -127,13 +135,15 @@ export const CompareExperimentsPage: React.FC<CompareExperimentsPageProps> = ({
           </div>
 
           <div>
-            <label className="block text-slate-400 font-semibold mb-1">
+            <label htmlFor="diff-exp-b" className="block text-slate-400 font-semibold mb-1">
               Experiment B (Candidate / Current):
             </label>
             <select
+              id="diff-exp-b"
               value={expBId}
+              disabled={diffLoading}
               onChange={(e) => handleSelectB(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:outline-none focus:border-emerald-500"
+              className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono focus:outline-none focus:border-emerald-500 disabled:opacity-50"
             >
               {experiments.map((e) => (
                 <option key={e.id} value={e.id}>

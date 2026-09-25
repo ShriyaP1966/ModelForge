@@ -204,13 +204,22 @@ class DatasetAnalyzer:
             # first: an explicit name match ("target", "label", ...) is much
             # stronger evidence than a column merely having a plausible
             # 2-10 unique-value cardinality, which many ordinary feature
-            # columns also satisfy.
+            # columns also satisfy. Within name matches, an exact match (the
+            # column is *literally* named "fraud") outranks a substring match
+            # (a column merely containing "label" somewhere in its name, e.g.
+            # "leakage_label_copy" -- itself a simulated leakage column in the
+            # bundled stress-test dataset) so column order can't accidentally
+            # let the weaker signal win a same-tier tie.
+            target_keywords = ["target", "label", "survived", "fraud", "churn", "price", "medhouseval", "outcome", "class"]
             is_target_cand = False
             target_confidence = 0
             if not is_constant and inferred_type != "id":
-                if any(t in lower_name for t in ["target", "label", "survived", "fraud", "churn", "price", "medhouseval", "outcome", "class"]):
+                if lower_name in target_keywords:
                     is_target_cand = True
-                    target_confidence = 3  # explicit name match
+                    target_confidence = 4  # exact keyword match
+                elif any(t in lower_name for t in target_keywords):
+                    is_target_cand = True
+                    target_confidence = 3  # keyword appears as a substring
                 elif inferred_type == "numeric" and str(col) == df.columns[-1]:
                     is_target_cand = True
                     target_confidence = 2  # last-column convention

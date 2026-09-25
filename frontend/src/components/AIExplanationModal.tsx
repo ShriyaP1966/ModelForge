@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, X, BrainCircuit, Lightbulb, AlertTriangle, ArrowRightCircle, CheckCircle2 } from 'lucide-react';
+import { Sparkles, X, BrainCircuit, Lightbulb, AlertTriangle, ArrowRightCircle, CheckCircle2, AlertCircle } from 'lucide-react';
 import { AIExplainResponse } from '../types';
 
 interface AIExplanationModalProps {
@@ -7,6 +7,7 @@ interface AIExplanationModalProps {
   onClose: () => void;
   explanation: AIExplainResponse | null;
   loading: boolean;
+  error?: string | null;
   experimentName: string;
 }
 
@@ -15,6 +16,7 @@ export const AIExplanationModal: React.FC<AIExplanationModalProps> = ({
   onClose,
   explanation,
   loading,
+  error,
   experimentName,
 }) => {
   if (!isOpen) return null;
@@ -55,6 +57,12 @@ export const AIExplanationModal: React.FC<AIExplanationModalProps> = ({
             <div className="py-16 flex flex-col items-center justify-center space-y-3">
               <BrainCircuit className="w-8 h-8 text-emerald-400 animate-pulse" />
               <p className="text-slate-400 text-xs font-mono">Synthesizing experiment metadata & formulating hypotheses...</p>
+            </div>
+          ) : error ? (
+            <div className="py-16 flex flex-col items-center justify-center space-y-3 text-center">
+              <AlertCircle className="w-8 h-8 text-rose-400" />
+              <p className="text-rose-300 text-sm font-semibold">Explanation failed</p>
+              <p className="text-slate-400 text-xs max-w-sm">{error}</p>
             </div>
           ) : explanation ? (
             <>

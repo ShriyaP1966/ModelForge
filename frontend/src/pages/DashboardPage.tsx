@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Project } from '../types';
 import { FolderGit2, Plus, Sparkles, Layers, ArrowRight, Trash2, Cpu } from 'lucide-react';
 import { api } from '../services/api';
+import { ErrorBanner } from '../components/ErrorBanner';
 
 interface DashboardPageProps {
   projects: Project[];
@@ -22,11 +23,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const [taskType, setTaskType] = useState<'classification' | 'regression'>('classification');
   const [submitting, setSubmitting] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [pageError, setPageError] = useState<string | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
     setSubmitting(true);
+    setModalError(null);
     try {
       const p = await api.createProject({
         name: name.trim(),
@@ -39,7 +43,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       onRefresh();
       onSelectProject(p.id);
     } catch (err: any) {
-      alert(`Failed to create project: ${err.message}`);
+      setModalError(err.message || 'Failed to create project.');
     } finally {
       setSubmitting(false);
     }
@@ -47,11 +51,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   const handleSeedSamples = async () => {
     setSeeding(true);
+    setPageError(null);
     try {
       await api.seedSampleProjects();
       onRefresh();
     } catch (err: any) {
-      alert(`Failed to seed samples: ${err.message}`);
+      setPageError(err.message || 'Failed to seed samples.');
     } finally {
       setSeeding(false);
     }
@@ -60,16 +65,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
     if (!confirm('Are you sure you want to delete this project and all its experiments?')) return;
+    setPageError(null);
     try {
       await api.deleteProject(id);
       onRefresh();
     } catch (err: any) {
-      alert(`Delete failed: ${err.message}`);
+      setPageError(err.message || 'Delete failed.');
     }
   };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <ErrorBanner message={pageError} onDismiss={() => setPageError(null)} />
+
       {/* Hero Banner */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/30 border border-slate-800 p-8 shadow-2xl">
         <div className="relative z-10 max-w-3xl space-y-3">
@@ -86,7 +94,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
           <div className="pt-2 flex flex-wrap gap-3">
             <button
-              onClick={() => setIsNewModalOpen(true)}
+              onClick={() => { setModalError(null); setIsNewModalOpen(true); }}
               className="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
             >
               <Plus className="w-4 h-4 mr-2 stroke-[2.5]" />
@@ -132,9 +140,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             </p>
             <button
               onClick={handleSeedSamples}
-              className="px-4 py-2 text-xs font-semibold bg-emerald-500 text-slate-950 rounded-lg hover:bg-emerald-400"
+              disabled={seeding}
+              className="px-4 py-2 text-xs font-semibold bg-emerald-500 text-slate-950 rounded-lg hover:bg-emerald-400 disabled:opacity-50"
             >
-              Load Sample Datasets
+              {seeding ? 'Loading Sample Workspaces...' : 'Load Sample Datasets'}
             </button>
           </div>
         ) : (
@@ -186,10 +195,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 space-y-5">
             <h3 className="text-lg font-bold text-white">Create New Project</h3>
+            <ErrorBanner message={modalError} onDismiss={() => setModalError(null)} />
             <form onSubmit={handleCreate} className="space-y-4 text-xs">
               <div>
-                <label className="block text-slate-400 font-semibold mb-1">Project Name</label>
+                <label htmlFor="new-proj-name" className="block text-slate-400 font-semibold mb-1">Project Name</label>
                 <input
+                  id="new-proj-name"
                   type="text"
                   required
                   placeholder="e.g. Customer Churn Prediction"
@@ -200,8 +211,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               </div>
 
               <div>
-                <label className="block text-slate-400 font-semibold mb-1">Description (Optional)</label>
+                <label htmlFor="new-proj-description" className="block text-slate-400 font-semibold mb-1">Description (Optional)</label>
                 <textarea
+                  id="new-proj-description"
                   rows={3}
                   placeholder="Goals, hypothesis, and scope of this ML experiment..."
                   value={description}

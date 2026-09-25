@@ -5,6 +5,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { LineageTree } from '../components/LineageTree';
 import { EvolutionChart } from '../components/EvolutionChart';
 import { ExperimentReplayModal } from '../components/ExperimentReplayModal';
+import { ErrorBanner } from '../components/ErrorBanner';
 import { formatModelName, formatMetric } from '../utils/formatting';
 import {
   Activity,
@@ -43,6 +44,7 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
   const [evolution, setEvolution] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isReplayOpen, setIsReplayOpen] = useState(false);
+  const [pageError, setPageError] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
@@ -73,11 +75,12 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
   const handleDeleteExp = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
     if (!confirm(`Delete experiment #${id}?`)) return;
+    setPageError(null);
     try {
       await api.deleteExperiment(id);
       loadData();
     } catch (err: any) {
-      alert(`Delete failed: ${err.message}`);
+      setPageError(err.message || 'Delete failed.');
     }
   };
 
@@ -93,6 +96,8 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <ErrorBanner message={pageError} onDismiss={() => setPageError(null)} />
+
       {/* Breadcrumb & Navigation */}
       <div className="flex items-center space-x-2 text-xs text-slate-400">
         <button onClick={onBack} className="hover:text-white flex items-center gap-1 font-semibold">
