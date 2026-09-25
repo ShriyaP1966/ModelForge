@@ -1,8 +1,33 @@
+<a name="top"></a>
+<div align="center">
+
 # ModelForge: AI Model Evolution Lab
 
-> **"See how your machine-learning model evolves."**
+### See how your machine-learning model evolves.
 
-**Live demo:** _deploying — link will be added here once the Render services are up._
+[![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-18.2.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.2.2-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-5.1.6-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4.3-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.4%2B-F7931E?style=for-the-badge&logo=scikitlearn&logoColor=white)](https://scikit-learn.org/)
+[![pandas](https://img.shields.io/badge/pandas-2.2%2B-150458?style=for-the-badge&logo=pandas&logoColor=white)](https://pandas.pydata.org/)
+[![SQLite](https://img.shields.io/badge/SQLite-Database-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+[![pytest](https://img.shields.io/badge/pytest-8.0%2B-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)](https://pytest.org/)
+[![Deployed on Render](https://img.shields.io/badge/Deployed_on-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://modelforge-frontend-sgbp.onrender.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
+
+[![Live Demo](https://img.shields.io/badge/Live_Demo-View_App-4CAF50?style=for-the-badge)](https://modelforge-frontend-sgbp.onrender.com)
+[![API Docs](https://img.shields.io/badge/API_Docs-Swagger_UI-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)](https://modelforge-backend-xbr6.onrender.com/docs)
+
+*The free Render backend sleeps after periods of inactivity, so the first load can take ~30–60 seconds while it spins back up.*
+
+**[Features](#features) · [Architecture](#architecture) · [Tech Stack](#tech-stack) · [Quick Start](#quick-start) · [Deployment](#deployment)**
+
+</div>
+
+---
 
 A free-first, portfolio-grade machine-learning experimentation platform designed for **AI Tools + AI System Design** coursework.
 
@@ -10,6 +35,7 @@ ModelForge turns tabular datasets into reproducible sequences of controlled expe
 
 ---
 
+<a name="features"></a>
 ## 🌟 Why ModelForge Is Distinctive
 
 - **Evolution Over Leaderboards**: Shows *how* and *why* a model/pipeline evolves across experiments rather than merely ranking final accuracy.
@@ -20,8 +46,29 @@ ModelForge turns tabular datasets into reproducible sequences of controlled expe
 - **Interactive Visuals**: Missing-value heatmaps, confusion matrices, ROC/PR curves, feature importance, dynamic pipeline visualizer, and step-by-step experiment replay.
 - **Free-First & Offline**: Runs entirely on a standard student laptop with local open-source tools. The AI assistant uses an intelligent deterministic scientific engine by default, requiring no paid APIs.
 
+<div align="right"><a href="#top">⬆ Back to top</a></div>
+
 ---
 
+## 📸 Screenshots
+
+<!-- TODO(ShriyaP1966): drop the real screenshots into docs/screenshots/ using these
+     exact filenames (dashboard.png, dataset-health.png, experiment-diff.png,
+     lineage.png) and this section will render them automatically. -->
+
+| Dashboard | Dataset Health |
+|---|---|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Dataset Health](docs/screenshots/dataset-health.png) |
+
+| Experiment Diff | Lineage DAG |
+|---|---|
+| ![Experiment Diff](docs/screenshots/experiment-diff.png) | ![Lineage](docs/screenshots/lineage.png) |
+
+<div align="right"><a href="#top">⬆ Back to top</a></div>
+
+---
+
+<a name="architecture"></a>
 ## 🏗️ Architecture
 
 ```
@@ -61,18 +108,23 @@ ModelForge turns tabular datasets into reproducible sequences of controlled expe
                       [ SQLite Database (modelforge.db) + Stored Artifacts ]
 ```
 
+<div align="right"><a href="#top">⬆ Back to top</a></div>
+
 ---
 
+<a name="tech-stack"></a>
 ## 🛠️ Technology Stack
 
-| Layer | Technologies |
+| Layer | Tools |
 |---|---|
 | **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons |
 | **Backend** | Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2.0 |
 | **Machine Learning** | scikit-learn, pandas, NumPy, SciPy, joblib |
 | **Database** | SQLite (zero-config local persistence) |
 | **Testing** | pytest, pytest-cov, Starlette TestClient |
-| **AI Layer** | Structured deterministic scientific engine (Offline / Free), Optional OpenAI/Gemini |
+| **AI Layer** | Structured deterministic scientific engine (Offline / Free) — works today. OpenAI/Gemini providers are **planned**, not yet implemented. |
+
+<div align="right"><a href="#top">⬆ Back to top</a></div>
 
 ---
 
@@ -94,8 +146,11 @@ ModelForge turns tabular datasets into reproducible sequences of controlled expe
 5. **Random Forest Regressor** (Ensemble averaging regression)
 6. **Gradient Boosting Regressor** (Gradient boosted regression trees)
 
+<div align="right"><a href="#top">⬆ Back to top</a></div>
+
 ---
 
+<a name="quick-start"></a>
 ## 🚀 Quick Start Guide
 
 ### Prerequisites
@@ -139,9 +194,11 @@ Open your browser at `http://localhost:5173`.
 
 ### 3. Run Automated Tests
 ```bash
-# Run complete test suite (28 passing tests covering all models & edge cases)
+# Run complete test suite (76 passing tests covering all models & edge cases)
 .\backend\venv\Scripts\python -m pytest -v
 ```
+
+<div align="right"><a href="#top">⬆ Back to top</a></div>
 
 ---
 
@@ -152,8 +209,11 @@ Located in `sample_data/`:
 2. `regression_housing.csv`: California housing market with geographic & socioeconomic features.
 3. `problematic_dataset.csv`: Stress-test dataset containing synthetic target leaks, duplicate rows, constant zero-variance features, and 95:5 class imbalance.
 
+<div align="right"><a href="#top">⬆ Back to top</a></div>
+
 ---
 
+<a name="deployment"></a>
 ## ☁️ Deploying to Render
 
 This repo includes a [`render.yaml`](render.yaml) Blueprint that provisions two free-tier services: a Python web service for the FastAPI backend and a static site for the React/Vite frontend.
@@ -167,6 +227,8 @@ This repo includes a [`render.yaml`](render.yaml) Blueprint that provisions two 
 5. Open the frontend URL — that's the live app.
 
 **Note:** the free plan uses ephemeral disk, so the SQLite database resets on redeploy or after the service spins down from inactivity. Fine for a demo/portfolio deployment; real persistence would need a paid instance with a Render persistent disk attached.
+
+<div align="right"><a href="#top">⬆ Back to top</a></div>
 
 ---
 
