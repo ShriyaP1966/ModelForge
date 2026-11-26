@@ -1,18 +1,19 @@
 import threading
 import unittest.mock
+
 import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.main import app
 from app.db.base import Base
 from app.db.session import SessionLocal
-from app.models.entities import Project, Dataset, Experiment, ExperimentMetric, ExperimentArtifact
-from app.services.experiment_manager import ExperimentManager
+from app.main import app
+from app.models.entities import Dataset, Experiment, ExperimentArtifact, ExperimentMetric, Project
 from app.services import experiment_manager as em_module
 from app.services.dataset_analyzer import calculate_file_sha256
+from app.services.experiment_manager import ExperimentManager
 
 client = TestClient(app)
 

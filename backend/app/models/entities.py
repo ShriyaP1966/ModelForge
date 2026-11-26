@@ -1,7 +1,10 @@
 import datetime
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, JSON
+
+from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+
 from app.db.base import Base
+
 
 class Project(Base):
     __tablename__ = "projects"
@@ -40,11 +43,11 @@ class Experiment(Base):
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
     dataset_id = Column(Integer, ForeignKey("datasets.id"), nullable=True)
     parent_id = Column(Integer, ForeignKey("experiments.id"), nullable=True)  # Lineage tracking
-    
+
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     model_type = Column(String(100), nullable=False)
-    
+
     # Configurations
     hyperparameters = Column(JSON, default=dict)
     preprocessing_config = Column(JSON, default=dict)
@@ -54,13 +57,13 @@ class Experiment(Base):
     test_size = Column(Float, default=0.2)
     cross_validation_folds = Column(Integer, default=0)  # 0 = simple train/val split
     primary_metric = Column(String(50), default="f1")    # e.g., f1, accuracy, rmse, r2
-    
+
     # State & Execution
     status = Column(String(50), default="queued")  # queued, running, completed, failed, cancelled
     duration_ms = Column(Integer, default=0)
     error_message = Column(Text, nullable=True)
     dataset_fingerprint = Column(String(64), nullable=True)
-    
+
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     project = relationship("Project", back_populates="experiments")

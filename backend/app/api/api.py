@@ -1,5 +1,6 @@
 from fastapi import APIRouter
-from app.api.endpoints import projects, datasets, experiments, reproduce, ai, settings_api
+
+from app.api.endpoints import ai, datasets, experiments, projects, reproduce, settings_api
 
 api_router = APIRouter()
 

@@ -1,7 +1,7 @@
-from typing import Dict, Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from app.core.config import settings, AI_AVAILABLE_PROVIDERS
+
+from app.core.config import AI_AVAILABLE_PROVIDERS, settings
 
 router = APIRouter()
 

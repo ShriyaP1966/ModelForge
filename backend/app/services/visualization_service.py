@@ -1,16 +1,17 @@
-from typing import Dict, Any, List, Optional
+from typing import Any
+
 
 class VisualizationService:
     """Provides structured graph schemas and side-by-side diff computations for frontend rendering."""
 
     @classmethod
-    def generate_pipeline_graph(cls, experiment: Any) -> Dict[str, Any]:
+    def generate_pipeline_graph(cls, experiment: Any) -> dict[str, Any]:
         """Generates nodes and edges representing the exact executed ML pipeline."""
         prep = experiment.preprocessing_config or {}
         model_type = experiment.model_type or "model"
         params = experiment.hyperparameters or {}
         features = experiment.feature_selection or []
-        
+
         nodes = []
         edges = []
 
@@ -96,7 +97,7 @@ class VisualizationService:
         }
 
     @classmethod
-    def compute_experiment_diff(cls, exp_a: Any, exp_b: Any) -> Dict[str, Any]:
+    def compute_experiment_diff(cls, exp_a: Any, exp_b: Any) -> dict[str, Any]:
         """Calculates precise side-by-side configuration and metric diff between two experiments."""
         diff_items = []
 
@@ -180,7 +181,7 @@ class VisualizationService:
                 delta = round(val_b - val_a, 4)
                 pct_change = round(((val_b - val_a) / abs(val_a)) * 100, 2) if val_a != 0 else 0.0
                 higher_is_better = m_key.lower() in higher_is_better_set
-                
+
                 if delta == 0:
                     status = "neutral"
                 elif (higher_is_better and delta > 0) or (not higher_is_better and delta < 0):

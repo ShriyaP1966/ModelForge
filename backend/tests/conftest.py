@@ -17,6 +17,7 @@ os.environ["DATA_DIR"] = str(_TEST_TMP_DIR / "data")
 os.environ["MODELS_DIR"] = str(_TEST_TMP_DIR / "models")
 
 import shutil
+
 import pytest
 
 

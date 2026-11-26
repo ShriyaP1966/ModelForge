@@ -1,21 +1,22 @@
-import pytest
 import numpy as np
+
 from app.services.evaluation_engine import EvaluationEngine
+
 
 def test_evaluation_classification():
     y_train = np.array([0, 1, 0, 1, 1, 0, 1, 0])
     y_train_pred = np.array([0, 1, 0, 1, 1, 0, 1, 0])
-    
+
     y_val = np.array([0, 1, 0, 1])
     y_val_pred = np.array([0, 1, 0, 0])
-    
+
     res = EvaluationEngine.evaluate_classification(
         y_train=y_train,
         y_train_pred=y_train_pred,
         y_val=y_val,
         y_val_pred=y_val_pred
     )
-    
+
     assert "accuracy" in res["validation_metrics"]
     assert "f1" in res["validation_metrics"]
     assert "confusion_matrix" in res
@@ -139,17 +140,17 @@ def test_confusion_matrix_shape_no_classes_arg_falls_back_to_observed_union():
 def test_evaluation_regression():
     y_train = np.array([10.0, 20.0, 30.0, 40.0])
     y_train_pred = np.array([10.1, 19.9, 30.0, 39.8])
-    
+
     y_val = np.array([15.0, 25.0])
     y_val_pred = np.array([14.9, 25.2])
-    
+
     res = EvaluationEngine.evaluate_regression(
         y_train=y_train,
         y_train_pred=y_train_pred,
         y_val=y_val,
         y_val_pred=y_val_pred
     )
-    
+
     assert "rmse" in res["validation_metrics"]
     assert "r2" in res["validation_metrics"]
     assert "residuals" in res

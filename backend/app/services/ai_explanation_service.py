@@ -1,5 +1,7 @@
-from typing import Dict, Any, List, Optional
-from app.core.config import settings, AI_AVAILABLE_PROVIDERS
+from typing import Any
+
+from app.core.config import AI_AVAILABLE_PROVIDERS, settings
+
 
 class AIExplanationService:
     """Provides natural-language and structured scientific explanations for experiment evolution."""
@@ -7,10 +9,10 @@ class AIExplanationService:
     @classmethod
     def explain_evolution(
         cls,
-        diff_data: Dict[str, Any],
+        diff_data: dict[str, Any],
         current_exp: Any,
-        baseline_exp: Optional[Any] = None
-    ) -> Dict[str, Any]:
+        baseline_exp: Any | None = None
+    ) -> dict[str, Any]:
         """Generates structured explanation of what changed, why performance shifted, and next steps.
 
         Only "offline" (the deterministic engine below) is implemented. The
@@ -29,10 +31,10 @@ class AIExplanationService:
     @classmethod
     def _generate_deterministic_explanation(
         cls,
-        diff_data: Dict[str, Any],
+        diff_data: dict[str, Any],
         current_exp: Any,
-        baseline_exp: Optional[Any] = None
-    ) -> Dict[str, Any]:
+        baseline_exp: Any | None = None
+    ) -> dict[str, Any]:
         what_changed = []
         performance_shifts = []
         hypotheses = []
@@ -73,9 +75,6 @@ class AIExplanationService:
         # 2. Summarize metric shifts
         primary_metric = current_exp.primary_metric.lower()
         pm_shift = next((m for m in metrics_diff if m["metric"].lower() == primary_metric), None)
-        
-        improved_count = sum(1 for m in metrics_diff if m["status"] == "improved")
-        declined_count = sum(1 for m in metrics_diff if m["status"] == "declined")
 
         for m in metrics_diff:
             if m.get("delta") is not None and m.get("status") != "neutral":
@@ -90,7 +89,6 @@ class AIExplanationService:
 
         # 3. Formulate grounded hypotheses
         curr_model = current_exp.model_type.lower()
-        prev_model = baseline_exp.model_type.lower() if baseline_exp else ""
 
         if scaler_changed:
             hypotheses.append(

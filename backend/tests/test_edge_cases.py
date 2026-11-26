@@ -1,9 +1,11 @@
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
+
 from app.services.dataset_analyzer import DatasetAnalyzer
-from app.services.pipeline_engine import MLPipelineEngine
 from app.services.evaluation_engine import EvaluationEngine
+from app.services.pipeline_engine import MLPipelineEngine
+
 
 def test_edge_case_empty_dataset():
     df = pd.DataFrame()

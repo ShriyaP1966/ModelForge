@@ -1,9 +1,9 @@
 import hashlib
-import io
-import re
-from typing import Dict, Any, List, Optional, Tuple
-import pandas as pd
+from typing import Any
+
 import numpy as np
+import pandas as pd
+
 
 def calculate_sha256(file_content: bytes) -> str:
     """Calculate SHA256 fingerprint for dataset byte stream."""
@@ -39,7 +39,7 @@ class DatasetAnalyzer:
         non_null = series.dropna()
         if len(non_null) == 0:
             return "empty"
-        
+
         lower_name = col_name.lower()
         if lower_name.endswith(("_id", "id")) or "uuid" in lower_name or "ssn" in lower_name:
             if series.nunique() / max(len(series), 1) > 0.8:
@@ -47,23 +47,23 @@ class DatasetAnalyzer:
 
         if pd.api.types.is_bool_dtype(series):
             return "boolean"
-        
+
         # Check datetime
         if pd.api.types.is_datetime64_any_dtype(series):
             return "datetime"
-        
+
         # Try numeric
         if pd.api.types.is_numeric_dtype(series):
             # If only 2 unique values (0 and 1)
             unique_vals = set(non_null.unique())
-            if unique_vals.issubset({0, 1, 0.0, 1.0}):
+            if unique_vals.issubset({0, 1}):
                 return "boolean"
             return "numeric"
-        
+
         # String or object
         unique_count = series.nunique()
         total_count = len(non_null)
-        
+
         # If very high cardinality text
         if unique_count / total_count > 0.8 and total_count > 20:
             # Check avg string length
@@ -71,15 +71,15 @@ class DatasetAnalyzer:
             if avg_len > 30:
                 return "text"
             return "id"
-        
+
         return "categorical"
 
     @classmethod
-    def analyze(cls, df: pd.DataFrame, target_candidate: Optional[str] = None) -> Dict[str, Any]:
+    def analyze(cls, df: pd.DataFrame, target_candidate: str | None = None) -> dict[str, Any]:
         """Perform comprehensive dataset intelligence analysis."""
         row_count = len(df)
         col_count = len(df.columns)
-        
+
         if row_count == 0 or col_count == 0:
             return {
                 "row_count": row_count,
@@ -101,25 +101,25 @@ class DatasetAnalyzer:
         total_cells = row_count * col_count
         total_missing = int(df.isna().sum().sum())
         missing_pct = round((total_missing / max(total_cells, 1)) * 100, 2)
-        
+
         columns_info = []
         potential_targets = []
-        target_confidences: Dict[str, int] = {}
+        target_confidences: dict[str, int] = {}
         leakage_warnings = []
         summary_notes = []
-        
+
         numeric_cols = []
-        
+
         # Health deductions tracker
         health_penalties = 0
-        
+
         if missing_pct > 25:
             health_penalties += 20
             summary_notes.append(f"High missing data rate: {missing_pct}% of dataset cells are missing.")
         elif missing_pct > 5:
             health_penalties += 8
             summary_notes.append(f"Moderate missing data: {missing_pct}% missing cells.")
-            
+
         dup_pct = (duplicate_rows / row_count) * 100
         if dup_pct > 10:
             health_penalties += 15
@@ -139,15 +139,15 @@ class DatasetAnalyzer:
             unique_count = int(series.nunique(dropna=True))
             inferred_type = cls.infer_column_type(series, str(col))
             is_constant = (unique_count <= 1)
-            
+
             leakage_reasons = []
             is_leakage = False
-            
+
             # Constant column check
             if is_constant:
                 health_penalties += 4
                 summary_notes.append(f"Column '{col}' is constant (zero variance).")
-                
+
             # Identifier column warning
             if inferred_type == "id" and unique_count > 10:
                 is_leakage = True
@@ -160,9 +160,9 @@ class DatasetAnalyzer:
                 leakage_reasons.append("Column name strongly suggests synthetic or target proxy leakage.")
 
             # Compute stats
-            stats: Dict[str, Any] = {}
+            stats: dict[str, Any] = {}
             outlier_count = 0
-            
+
             if inferred_type in ("numeric", "boolean"):
                 numeric_cols.append(str(col))
                 non_null = pd.to_numeric(series, errors="coerce").dropna()
@@ -174,7 +174,7 @@ class DatasetAnalyzer:
                     stats["median"] = round(float(non_null.median()), 4)
                     stats["q25"] = round(float(non_null.quantile(0.25)), 4)
                     stats["q75"] = round(float(non_null.quantile(0.75)), 4)
-                    
+
                     # Outlier calculation via IQR
                     iqr = stats["q75"] - stats["q25"]
                     if iqr > 0:
@@ -259,7 +259,7 @@ class DatasetAnalyzer:
         potential_targets.sort(key=lambda c: target_confidences.get(c, 0), reverse=True)
 
         # Calculate Correlation Matrix for numeric columns
-        corr_matrix: Dict[str, Dict[str, float]] = {}
+        corr_matrix: dict[str, dict[str, float]] = {}
         if len(numeric_cols) >= 2:
             num_df = df[numeric_cols].apply(pd.to_numeric, errors="coerce")
             raw_corr = num_df.corr(method="pearson").fillna(0.0)
@@ -284,7 +284,7 @@ class DatasetAnalyzer:
                             health_penalties += 10
 
         # Class balance check if a target is identified
-        class_balance: Optional[Dict[str, int]] = None
+        class_balance: dict[str, int] | None = None
         target_for_balance = target_candidate if target_candidate in df.columns else (potential_targets[0] if potential_targets else None)
         if target_for_balance and df[target_for_balance].nunique() <= 20:
             counts = df[target_for_balance].value_counts().to_dict()

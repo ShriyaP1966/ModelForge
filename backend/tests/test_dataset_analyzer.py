@@ -1,7 +1,8 @@
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 from app.services.dataset_analyzer import DatasetAnalyzer
+
 
 def test_analyze_normal_dataset():
     df = pd.DataFrame({
@@ -10,9 +11,9 @@ def test_analyze_normal_dataset():
         "department": ["IT", "HR", "IT", "Sales", "HR", "IT", "Sales", "HR"],
         "target": [0, 1, 0, 1, 0, 1, 1, 0]
     })
-    
+
     result = DatasetAnalyzer.analyze(df, target_candidate="target")
-    
+
     assert result["row_count"] == 8
     assert result["col_count"] == 4
     assert result["duplicate_rows"] == 0
@@ -28,7 +29,7 @@ def test_analyze_leakage_detection():
     })
     # Perfect leak column
     df["leak_target_copy"] = df["target"]
-    
+
     result = DatasetAnalyzer.analyze(df, target_candidate="target")
     leak_warnings = result["leakage_warnings"]
     assert len(leak_warnings) > 0

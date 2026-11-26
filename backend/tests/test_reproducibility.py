@@ -1,15 +1,16 @@
-import pytest
-import os
+
 import pandas as pd
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.db.base import Base
-from app.models.entities import Project, Dataset, Experiment
-from app.services.experiment_manager import ExperimentManager
-from app.services.reproducibility_service import ReproducibilityService
+from app.models.entities import Dataset, Experiment, Project
 from app.services.dataset_analyzer import calculate_file_sha256, load_dataset
+from app.services.experiment_manager import ExperimentManager
 from app.services.pipeline_engine import MLPipelineEngine
+from app.services.reproducibility_service import ReproducibilityService
+
 
 @pytest.fixture
 def in_memory_db(tmp_path):
@@ -68,13 +69,13 @@ def in_memory_db(tmp_path):
 def test_reproduce_exact_match(in_memory_db):
     session, exp_id, _ = in_memory_db
     res = ReproducibilityService.reproduce(session, exp_id, tolerance=1e-4)
-    
+
     assert res["reproduced_successfully"] is True
     assert res["dataset_match"] is True
     assert res["within_tolerance"] is True
     assert len(res["original_metrics"]) > 0
     # Every metric difference should be 0.0 or <= 1e-4
-    for metric, diff in res["metric_differences"].items():
+    for _metric, diff in res["metric_differences"].items():
         assert diff <= 1e-4
 
 def test_reproduce_tampered_dataset_fails(in_memory_db):
