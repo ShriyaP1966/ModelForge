@@ -10,9 +10,11 @@ interface RocCurveProps {
     precision: number[];
     recall: number[];
   };
+  /** Highlights a chosen decision threshold on whichever curve is shown. */
+  operatingPoint?: { fpr: number; tpr: number; precision: number; recall: number };
 }
 
-export const RocCurve: React.FC<RocCurveProps> = ({ rocData, prData }) => {
+export const RocCurve: React.FC<RocCurveProps> = ({ rocData, prData, operatingPoint }) => {
   const [activeTab, setActiveTab] = useState<'roc' | 'pr'>('roc');
 
   if (!rocData && !prData) {
@@ -141,6 +143,19 @@ export const RocCurve: React.FC<RocCurveProps> = ({ rocData, prData }) => {
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
+            />
+          )}
+
+          {/* Operating point for the selected threshold */}
+          {operatingPoint && (
+            <circle
+              data-testid="operating-point"
+              cx={toSvgX(activeTab === 'roc' ? operatingPoint.fpr : operatingPoint.recall)}
+              cy={toSvgY(activeTab === 'roc' ? operatingPoint.tpr : operatingPoint.precision)}
+              r="5"
+              fill="#f59e0b"
+              stroke="#0f172a"
+              strokeWidth="1.5"
             />
           )}
 

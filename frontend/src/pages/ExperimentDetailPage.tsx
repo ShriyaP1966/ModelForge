@@ -6,6 +6,8 @@ import { StatusBadge } from '../components/StatusBadge';
 import { OverfittingBanner } from '../components/OverfittingBanner';
 import { ConfusionMatrix } from '../components/ConfusionMatrix';
 import { RocCurve } from '../components/RocCurve';
+import { ThresholdExplorer } from '../components/ThresholdExplorer';
+import { PerClassMetrics } from '../components/PerClassMetrics';
 import { FeatureImportanceChart } from '../components/FeatureImportanceChart';
 import { PipelineVisualizer } from '../components/PipelineVisualizer';
 import { AIExplanationModal } from '../components/AIExplanationModal';
@@ -161,6 +163,8 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
   const cmArtifact = experiment.artifacts.find((a) => a.artifact_type === 'confusion_matrix');
   const rocArtifact = experiment.artifacts.find((a) => a.artifact_type === 'roc_curve');
   const prArtifact = experiment.artifacts.find((a) => a.artifact_type === 'pr_curve');
+  const thresholdArtifact = experiment.artifacts.find((a) => a.artifact_type === 'threshold_analysis');
+  const perClassArtifact = experiment.artifacts.find((a) => a.artifact_type === 'per_class_metrics');
   const featArtifact = experiment.artifacts.find((a) => a.artifact_type === 'feature_importance');
   const overfitArtifact = experiment.artifacts.find((a) => a.artifact_type === 'overfitting');
   const residualArtifact = experiment.artifacts.find((a) => a.artifact_type === 'residuals');
@@ -441,21 +445,45 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
       {/* Model Visuals: Confusion Matrix, ROC/PR Curves, Feature Importances */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Classification Visuals */}
-        {cmArtifact && (
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+        {thresholdArtifact ? (
+          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 lg:col-span-2">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-              Confusion Matrix Heatmap
+              Threshold Explorer
             </h3>
-            <ConfusionMatrix data={cmArtifact.data} />
+            <ThresholdExplorer
+              analysis={thresholdArtifact.data}
+              rocData={rocArtifact?.data}
+              prData={prArtifact?.data}
+            />
           </div>
+        ) : (
+          <>
+            {cmArtifact && (
+              <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                  Confusion Matrix Heatmap
+                </h3>
+                <ConfusionMatrix data={cmArtifact.data} />
+              </div>
+            )}
+
+            {(rocArtifact || prArtifact) && (
+              <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                  ROC & Precision-Recall Analysis
+                </h3>
+                <RocCurve rocData={rocArtifact?.data} prData={prArtifact?.data} />
+              </div>
+            )}
+          </>
         )}
 
-        {(rocArtifact || prArtifact) && (
-          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+        {perClassArtifact && (
+          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 lg:col-span-2">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-              ROC & Precision-Recall Analysis
+              Per-Class Metrics
             </h3>
-            <RocCurve rocData={rocArtifact?.data} prData={prArtifact?.data} />
+            <PerClassMetrics classes={perClassArtifact.data?.classes} />
           </div>
         )}
 
