@@ -16,9 +16,71 @@ from sklearn.metrics import (
     roc_curve,
 )
 
+THRESHOLD_STEPS = 101  # 0.00, 0.01, ... 1.00
+
 
 class EvaluationEngine:
     """Computes comprehensive classification and regression metrics, curves, and overfitting diagnostics."""
+
+    @staticmethod
+    def per_class_metrics(matrix: list[list[int]], labels: list[str]) -> list[dict[str, Any]]:
+        """Per-class precision, recall, F1 and support derived from a confusion matrix.
+
+        Rows of `matrix` are true classes and columns are predicted classes. A
+        metric whose denominator is zero (no predictions or no true samples
+        for that class) is reported as 0.0, matching sklearn's zero_division=0.
+        """
+        cm = np.asarray(matrix, dtype=float)
+        rows = []
+        for i, label in enumerate(labels):
+            tp = cm[i, i]
+            predicted = cm[:, i].sum()
+            actual = cm[i, :].sum()
+            precision = tp / predicted if predicted > 0 else 0.0
+            recall = tp / actual if actual > 0 else 0.0
+            f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+            rows.append({
+                "label": label,
+                "precision": round(float(precision), 4),
+                "recall": round(float(recall), 4),
+                "f1": round(float(f1), 4),
+                "support": int(actual),
+            })
+        return rows
+
+    @staticmethod
+    def threshold_analysis(
+        y_val: np.ndarray,
+        positive_proba: np.ndarray,
+        negative_label: str,
+        positive_label: str,
+        steps: int = THRESHOLD_STEPS,
+    ) -> dict[str, Any]:
+        """Confusion counts of a binary classifier at evenly spaced decision thresholds.
+
+        A sample is predicted positive when its positive-class probability is
+        >= the threshold. Only counts are stored; the UI derives precision,
+        recall, F1 and accuracy from them for whichever threshold is selected.
+        """
+        y = np.asarray(y_val) == 1
+        proba = np.asarray(positive_proba, dtype=float)
+        thresholds = np.linspace(0.0, 1.0, steps)
+        tp, fp, tn, fn = [], [], [], []
+        for t in thresholds:
+            pred = proba >= t
+            tp.append(int(np.sum(pred & y)))
+            fp.append(int(np.sum(pred & ~y)))
+            tn.append(int(np.sum(~pred & ~y)))
+            fn.append(int(np.sum(~pred & y)))
+        return {
+            "thresholds": [round(float(t), 4) for t in thresholds],
+            "tp": tp,
+            "fp": fp,
+            "tn": tn,
+            "fn": fn,
+            "positive_label": positive_label,
+            "negative_label": negative_label,
+        }
 
     @classmethod
     def evaluate_classification(
@@ -111,6 +173,19 @@ class EvaluationEngine:
             except Exception:
                 pass
 
+        # Threshold sweep: only meaningful for a true two-class label space
+        # with a probability for each class.
+        threshold_data = None
+        if (
+            len(unique_classes) == 2
+            and len(class_labels) == 2
+            and y_val_proba is not None
+            and y_val_proba.shape[1] == 2
+        ):
+            threshold_data = cls.threshold_analysis(
+                y_val, y_val_proba[:, 1], negative_label=class_labels[0], positive_label=class_labels[1]
+            )
+
         val_metrics = {
             "accuracy": round(val_acc, 4),
             "precision": round(val_prec, 4),
@@ -141,7 +216,9 @@ class EvaluationEngine:
                 "labels": class_labels
             },
             "roc_curve": roc_data,
-            "pr_curve": pr_data
+            "pr_curve": pr_data,
+            "per_class_metrics": cls.per_class_metrics(cm_list, class_labels),
+            "threshold_analysis": threshold_data,
         }
 
     @classmethod
