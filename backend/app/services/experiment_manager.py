@@ -238,6 +238,18 @@ class ExperimentManager:
                         artifact_type="pr_curve",
                         data=eval_result["pr_curve"]
                     ))
+                if eval_result.get("per_class_metrics"):
+                    db.add(ExperimentArtifact(
+                        experiment_id=exp.id,
+                        artifact_type="per_class_metrics",
+                        data={"classes": eval_result["per_class_metrics"]}
+                    ))
+                if eval_result.get("threshold_analysis"):
+                    db.add(ExperimentArtifact(
+                        experiment_id=exp.id,
+                        artifact_type="threshold_analysis",
+                        data=eval_result["threshold_analysis"]
+                    ))
             else:
                 if eval_result.get("residuals"):
                     db.add(ExperimentArtifact(

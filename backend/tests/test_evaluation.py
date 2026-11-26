@@ -154,3 +154,91 @@ def test_evaluation_regression():
     assert "rmse" in res["validation_metrics"]
     assert "r2" in res["validation_metrics"]
     assert "residuals" in res
+
+
+def test_per_class_metrics_match_hand_computed_values():
+    # Rows are true classes, columns are predictions.
+    matrix = [[8, 2], [1, 4]]
+    rows = EvaluationEngine.per_class_metrics(matrix, ["no", "yes"])
+
+    assert [r["label"] for r in rows] == ["no", "yes"]
+    assert rows[0]["support"] == 10
+    assert rows[1]["support"] == 5
+    # class "no": precision 8/9, recall 8/10
+    assert rows[0]["precision"] == round(8 / 9, 4)
+    assert rows[0]["recall"] == 0.8
+    # class "yes": precision 4/6, recall 4/5
+    assert rows[1]["precision"] == round(4 / 6, 4)
+    assert rows[1]["recall"] == 0.8
+
+
+def test_per_class_metrics_handles_class_that_is_never_predicted():
+    rows = EvaluationEngine.per_class_metrics([[5, 0], [3, 0]], ["a", "b"])
+
+    assert rows[1]["precision"] == 0.0
+    assert rows[1]["recall"] == 0.0
+    assert rows[1]["f1"] == 0.0
+    assert rows[1]["support"] == 3
+
+
+def test_threshold_analysis_counts_are_consistent_at_every_threshold():
+    y_val = np.array([0, 0, 1, 1, 1, 0])
+    proba = np.array([0.1, 0.4, 0.35, 0.8, 0.9, 0.6])
+
+    res = EvaluationEngine.threshold_analysis(y_val, proba, negative_label="no", positive_label="yes")
+
+    assert res["thresholds"][0] == 0.0 and res["thresholds"][-1] == 1.0
+    assert len(res["thresholds"]) == len(res["tp"]) == len(res["fn"])
+    for tp, fp, tn, fn in zip(res["tp"], res["fp"], res["tn"], res["fn"], strict=True):
+        assert tp + fp + tn + fn == len(y_val)
+    # Threshold 0 predicts everything positive; raising it can only lose positives.
+    assert res["tp"][0] == 3 and res["fp"][0] == 3
+    assert res["tp"] == sorted(res["tp"], reverse=True)
+    assert res["positive_label"] == "yes"
+
+
+def test_threshold_analysis_at_half_matches_manual_confusion_matrix():
+    y_val = np.array([0, 0, 1, 1, 1, 0])
+    proba = np.array([0.1, 0.4, 0.35, 0.8, 0.9, 0.6])
+
+    res = EvaluationEngine.threshold_analysis(y_val, proba, negative_label="no", positive_label="yes")
+    i = res["thresholds"].index(0.5)
+
+    # predicted positive: samples with proba >= 0.5 -> indices 3, 4, 5
+    assert (res["tp"][i], res["fp"][i], res["tn"][i], res["fn"][i]) == (2, 1, 2, 1)
+
+
+def test_evaluate_classification_includes_threshold_and_per_class_data_for_binary():
+    y = np.array([0, 1, 0, 1, 1, 0])
+    proba = np.array([[0.9, 0.1], [0.2, 0.8], [0.7, 0.3], [0.4, 0.6], [0.1, 0.9], [0.55, 0.45]])
+
+    res = EvaluationEngine.evaluate_classification(
+        y_train=y, y_train_pred=y, y_val=y, y_val_pred=(proba[:, 1] >= 0.5).astype(int),
+        y_val_proba=proba, classes=["no", "yes"],
+    )
+
+    assert res["threshold_analysis"]["positive_label"] == "yes"
+    assert [c["label"] for c in res["per_class_metrics"]] == ["no", "yes"]
+
+
+def test_evaluate_classification_skips_threshold_analysis_without_probabilities():
+    y = np.array([0, 1, 0, 1])
+
+    res = EvaluationEngine.evaluate_classification(
+        y_train=y, y_train_pred=y, y_val=y, y_val_pred=y, classes=["no", "yes"],
+    )
+
+    assert res["threshold_analysis"] is None
+    assert len(res["per_class_metrics"]) == 2
+
+
+def test_evaluate_classification_skips_threshold_analysis_for_multiclass():
+    y = np.array([0, 1, 2, 0, 1, 2])
+    proba = np.eye(3)[y]
+
+    res = EvaluationEngine.evaluate_classification(
+        y_train=y, y_train_pred=y, y_val=y, y_val_pred=y, y_val_proba=proba, classes=["a", "b", "c"],
+    )
+
+    assert res["threshold_analysis"] is None
+    assert len(res["per_class_metrics"]) == 3
