@@ -6,6 +6,7 @@ import { LineageTree } from '../components/LineageTree';
 import { EvolutionChart } from '../components/EvolutionChart';
 import { ExperimentReplayModal } from '../components/ExperimentReplayModal';
 import { ErrorBanner } from '../components/ErrorBanner';
+import { ExportButtons } from '../components/ExportButtons';
 import { formatModelName, formatMetric } from '../utils/formatting';
 import {
   Activity,
@@ -145,6 +146,23 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
               <GitCompare className="w-3.5 h-3.5 mr-1.5 text-amber-400" />
               Compare Diffs
             </button>
+          )}
+
+          {experiments.length > 0 && (
+            <ExportButtons
+              items={[
+                {
+                  label: 'Export Runs (CSV)',
+                  path: `/experiments/project/${projectId}/export?format=csv`,
+                  filename: `project-${projectId}-runs.csv`,
+                },
+                {
+                  label: 'Export Runs (JSON)',
+                  path: `/experiments/project/${projectId}/export?format=json`,
+                  filename: `project-${projectId}-runs.json`,
+                },
+              ]}
+            />
           )}
 
           {evolution.length > 0 && (
