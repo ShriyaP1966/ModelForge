@@ -1,4 +1,6 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from typing import Literal
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -6,6 +8,7 @@ from app.db.session import get_db
 from app.models.entities import Dataset, Experiment, Project
 from app.schemas.schemas import ExperimentCreate, ExperimentDiffResponse, ExperimentResponse, LineageNode
 from app.services.experiment_manager import ExperimentManager
+from app.services.export_service import ExportService
 from app.services.visualization_service import VisualizationService
 
 router = APIRouter()
@@ -116,6 +119,43 @@ def get_project_experiments(project_id: int, db: Session = Depends(get_db)):
     return db.query(Experiment).filter(
         Experiment.project_id == project_id
     ).order_by(Experiment.created_at.desc()).all()
+
+def _download(content: str, media_type: str, filename: str) -> Response:
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+@router.get("/project/{project_id}/export")
+def export_project_runs(
+    project_id: int,
+    format: Literal["csv", "json"] = Query("csv"),
+    db: Session = Depends(get_db),
+):
+    """Download every run in a project (configuration, dataset fingerprint and metrics)."""
+    if not db.query(Project).filter(Project.id == project_id).first():
+        raise HTTPException(status_code=404, detail="Project not found")
+    experiments = db.query(Experiment).filter(
+        Experiment.project_id == project_id
+    ).order_by(Experiment.id).all()
+    if format == "json":
+        return _download(ExportService.project_runs_json(experiments), "application/json", f"project-{project_id}-runs.json")
+    return _download(ExportService.project_runs_csv(experiments), "text/csv", f"project-{project_id}-runs.csv")
+
+@router.get("/{experiment_id}/export")
+def export_experiment(
+    experiment_id: int,
+    format: Literal["json", "md"] = Query("json"),
+    db: Session = Depends(get_db),
+):
+    """Download one experiment as JSON or as a short Markdown report."""
+    exp = db.query(Experiment).filter(Experiment.id == experiment_id).first()
+    if not exp:
+        raise HTTPException(status_code=404, detail="Experiment not found")
+    if format == "md":
+        return _download(ExportService.experiment_report(exp), "text/markdown", f"experiment-{experiment_id}-report.md")
+    return _download(ExportService.experiment_json(exp), "application/json", f"experiment-{experiment_id}.json")
 
 @router.get("/{experiment_id}", response_model=ExperimentResponse)
 def get_experiment(experiment_id: int, db: Session = Depends(get_db)):
