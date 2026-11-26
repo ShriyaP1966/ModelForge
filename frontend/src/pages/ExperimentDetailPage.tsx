@@ -24,7 +24,6 @@ import {
   AlertCircle,
   XCircle,
   StopCircle,
-  Cpu,
   Layers,
   Fingerprint,
 } from 'lucide-react';

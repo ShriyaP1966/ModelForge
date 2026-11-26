@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, SkipBack, SkipForward, X, RotateCcw, Award } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, X, RotateCcw } from 'lucide-react';
 import { formatModelName, formatMetric } from '../utils/formatting';
-import { PipelineVisualizer } from './PipelineVisualizer';
 
 interface ExperimentReplayModalProps {
   isOpen: boolean;

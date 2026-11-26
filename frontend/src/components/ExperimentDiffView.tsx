@@ -1,7 +1,7 @@
 import React from 'react';
 import { ExperimentDiffResponse } from '../types';
 import { formatModelName, formatMetric } from '../utils/formatting';
-import { ArrowRight, CheckCircle2, AlertCircle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ArrowRight, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 interface ExperimentDiffViewProps {
   diffData: ExperimentDiffResponse;

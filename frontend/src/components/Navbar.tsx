@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers, Activity, Settings, Plus, Sparkles, Database } from 'lucide-react';
+import { Layers, Settings, Plus, Database } from 'lucide-react';
 
 interface NavbarProps {
   currentView: string;
