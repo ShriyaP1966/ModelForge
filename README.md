@@ -8,7 +8,7 @@
 **Live demo:** https://modelforge-frontend-sgbp.onrender.com
 **API docs:** https://modelforge-backend-xbr6.onrender.com/docs
 
-The demo runs on a free Render instance that sleeps when idle, so the first load can take 30 to 60 seconds. When it wakes up it loads three sample projects and trains a few sample experiments in the background; the project page fills in as they finish.
+The demo runs on a free Render instance that sleeps when idle, so the first load can take 30 to 60 seconds. The free tier does not keep data between restarts, so each time it wakes up it recreates the three sample projects and trains a few sample experiments in the background; the project page fills in as they finish.
 
 ![Project page with metric evolution and experiment lineage](docs/screenshots/project-lineage.png)
 
@@ -28,7 +28,7 @@ The demo runs on a free Render instance that sleeps when idle, so the first load
 
 ## Why I built this
 
-I'm an AI undergraduate working on NLP and LLM research. When I run experiments I keep running into the same problem: a few weeks later I can't say which change moved a number, or whether I could get the same number again. Notebooks and spreadsheets don't answer that well. I wanted one place where every run is tied to its parent, its data and its seed, so the history of a model is something I can look at and re-run instead of reconstruct from memory. ModelForge is that, built on small tabular datasets so the whole loop stays fast.
+ML experiments are easy to run but hard to keep track of. After a few runs, it gets difficult to remember which dataset, settings and changes produced which result, and comparing runs properly takes more effort than it should. I built ModelForge to make that history visible, so experiments stay reproducible and I can see how a model changed from one run to the next. Building it taught me how to put together a full-stack ML tool end to end: training and evaluating scikit-learn models in a Python backend, showing the results in an interactive interface, and shipping it with CI and a live deployment.
 
 ## Tech stack
 
