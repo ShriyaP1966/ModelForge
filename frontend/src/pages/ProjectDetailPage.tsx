@@ -46,9 +46,10 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
   const [isReplayOpen, setIsReplayOpen] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
 
-  const loadData = async () => {
+  // `silent` refreshes in place without swapping the page for a spinner.
+  const loadData = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const [projData, dsData, expData, linData, evoData] = await Promise.all([
         api.getProject(projectId),
         api.getProjectDatasets(projectId),
@@ -71,6 +72,15 @@ export const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({
   useEffect(() => {
     loadData();
   }, [projectId]);
+
+  // Runs started elsewhere (e.g. the seeded samples) finish in the background;
+  // keep refreshing while any run is still queued or running.
+  const hasActiveRuns = experiments.some((e) => e.status === 'queued' || e.status === 'running');
+  useEffect(() => {
+    if (!hasActiveRuns) return;
+    const timer = setInterval(() => loadData(true), 3000);
+    return () => clearInterval(timer);
+  }, [hasActiveRuns, projectId]);
 
   const handleDeleteExp = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
