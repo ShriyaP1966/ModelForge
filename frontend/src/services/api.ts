@@ -88,6 +88,16 @@ export const api = {
   getDiff: (expAId: number, expBId: number) =>
     fetchJson<ExperimentDiffResponse>(`/experiments/${expAId}/diff/${expBId}`),
 
+  // Exports (CSV, JSON and Markdown downloads)
+  downloadExport: async (path: string): Promise<Blob> => {
+    const res = await fetch(`${BASE_URL}${path}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || `Export failed with status ${res.status}`);
+    }
+    return res.blob();
+  },
+
   // Reproducibility
   reproduceExperiment: (experimentId: number, tolerance = 1e-4) =>
     fetchJson<ReproduceResponse>('/reproduce/', {

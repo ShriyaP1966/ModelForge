@@ -15,6 +15,7 @@ import { CrossValidationSummary } from '../components/CrossValidationSummary';
 import { ResidualScatterPlot } from '../components/ResidualScatterPlot';
 import { LearningCurveChart } from '../components/LearningCurveChart';
 import { ErrorBanner } from '../components/ErrorBanner';
+import { ExportButtons } from '../components/ExportButtons';
 import { formatModelName, formatMetric } from '../utils/formatting';
 import {
   ArrowLeft,
@@ -217,6 +218,23 @@ export const ExperimentDetailPage: React.FC<ExperimentDetailPageProps> = ({
               <GitCompare className="w-3.5 h-3.5 mr-1.5 text-amber-400" />
               Diff with Parent (#{experiment.parent_id})
             </button>
+          )}
+
+          {!isRunning && (
+            <ExportButtons
+              items={[
+                {
+                  label: 'Export Report',
+                  path: `/experiments/${experiment.id}/export?format=md`,
+                  filename: `experiment-${experiment.id}-report.md`,
+                },
+                {
+                  label: 'Export JSON',
+                  path: `/experiments/${experiment.id}/export?format=json`,
+                  filename: `experiment-${experiment.id}.json`,
+                },
+              ]}
+            />
           )}
 
           {!isRunning && (
