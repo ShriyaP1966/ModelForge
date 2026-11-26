@@ -1,11 +1,12 @@
-import numpy as np
-from typing import Dict, Any, Optional
+from typing import Any
+
 from sqlalchemy.orm import Session
 
-from app.models.entities import Experiment, Dataset, Project
+from app.models.entities import Dataset, Experiment, Project
 from app.services.dataset_analyzer import calculate_file_sha256, load_dataset
-from app.services.pipeline_engine import MLPipelineEngine
 from app.services.evaluation_engine import EvaluationEngine
+from app.services.pipeline_engine import MLPipelineEngine
+
 
 class ReproducibilityService:
     """Certifies reproducibility of experimental pipelines using seeds and dataset fingerprints."""
@@ -16,7 +17,7 @@ class ReproducibilityService:
         db: Session,
         experiment_id: int,
         tolerance: float = 1e-4
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         exp = db.query(Experiment).filter(Experiment.id == experiment_id).first()
         if not exp:
             raise ValueError(f"Experiment {experiment_id} not found.")

@@ -1,18 +1,18 @@
 import os
 import shutil
-from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db
-from app.models.entities import Project, Dataset, Experiment
-from app.schemas.schemas import ProjectCreate, ProjectResponse
-from app.services.dataset_analyzer import calculate_file_sha256, DatasetAnalyzer, load_dataset
 from app.core.config import settings
+from app.db.session import get_db
+from app.models.entities import Dataset, Experiment, Project
+from app.schemas.schemas import ProjectCreate, ProjectResponse
+from app.services.dataset_analyzer import DatasetAnalyzer, calculate_file_sha256, load_dataset
 
 router = APIRouter()
 
-@router.get("/", response_model=List[ProjectResponse])
+@router.get("/", response_model=list[ProjectResponse])
 def get_projects(db: Session = Depends(get_db)):
     projects = db.query(Project).order_by(Project.created_at.desc()).all()
     res = []

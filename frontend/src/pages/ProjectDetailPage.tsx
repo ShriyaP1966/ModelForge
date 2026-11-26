@@ -17,7 +17,6 @@ import {
   ChevronRight,
   Trash2,
   GitFork,
-  CheckCircle2,
 } from 'lucide-react';
 
 interface ProjectDetailPageProps {

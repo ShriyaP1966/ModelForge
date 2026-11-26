@@ -1,11 +1,13 @@
-from typing import Dict, Any, List, Optional
 import datetime
+from typing import Any
+
 from pydantic import BaseModel, Field
+
 
 # --- Project Schemas ---
 class ProjectBase(BaseModel):
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     task_type: str = "classification"  # classification or regression
 
 class ProjectCreate(ProjectBase):
@@ -29,8 +31,8 @@ class DatasetResponse(BaseModel):
     row_count: int
     col_count: int
     sha256_hash: str
-    target_column: Optional[str] = None
-    summary_stats: Dict[str, Any] = Field(default_factory=dict)
+    target_column: str | None = None
+    summary_stats: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime.datetime
 
     class Config:
@@ -46,8 +48,8 @@ class ColumnSummary(BaseModel):
     is_constant: bool
     is_potential_target: bool
     is_potential_leakage: bool
-    leakage_reasons: List[str] = Field(default_factory=list)
-    stats: Dict[str, Any] = Field(default_factory=dict)  # min, max, mean, std, quantiles, top categories
+    leakage_reasons: list[str] = Field(default_factory=list)
+    stats: dict[str, Any] = Field(default_factory=dict)  # min, max, mean, std, quantiles, top categories
     outlier_count: int = 0
 
 class DatasetHealthReport(BaseModel):
@@ -58,12 +60,12 @@ class DatasetHealthReport(BaseModel):
     missing_pct: float
     health_score: float  # 0 to 100
     health_status: str  # Excellent, Good, Fair, Critical
-    columns: List[ColumnSummary]
-    potential_targets: List[str]
-    leakage_warnings: List[Dict[str, Any]]
-    correlation_matrix: Dict[str, Dict[str, float]]
-    class_balance: Optional[Dict[str, int]] = None
-    summary_notes: List[str] = Field(default_factory=list)
+    columns: list[ColumnSummary]
+    potential_targets: list[str]
+    leakage_warnings: list[dict[str, Any]]
+    correlation_matrix: dict[str, dict[str, float]]
+    class_balance: dict[str, int] | None = None
+    summary_notes: list[str] = Field(default_factory=list)
 
 # --- Experiment Schemas ---
 class PreprocessingConfig(BaseModel):
@@ -74,13 +76,13 @@ class PreprocessingConfig(BaseModel):
 class ExperimentCreate(BaseModel):
     project_id: int
     dataset_id: int
-    parent_id: Optional[int] = None
+    parent_id: int | None = None
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     model_type: str  # e.g. "logistic_regression", "random_forest", "linear_regression", etc.
-    hyperparameters: Dict[str, Any] = Field(default_factory=dict)
+    hyperparameters: dict[str, Any] = Field(default_factory=dict)
     preprocessing_config: PreprocessingConfig = Field(default_factory=PreprocessingConfig)
-    feature_selection: Optional[List[str]] = None  # None = use all valid features
+    feature_selection: list[str] | None = None  # None = use all valid features
     target_column: str
     random_seed: int = 42
     test_size: float = 0.2
@@ -97,8 +99,8 @@ class ExperimentMetricResponse(BaseModel):
 
 class ExperimentArtifactResponse(BaseModel):
     artifact_type: str
-    file_path: Optional[str] = None
-    data: Optional[Dict[str, Any]] = None
+    file_path: str | None = None
+    data: dict[str, Any] | None = None
 
     class Config:
         from_attributes = True
@@ -106,14 +108,14 @@ class ExperimentArtifactResponse(BaseModel):
 class ExperimentResponse(BaseModel):
     id: int
     project_id: int
-    dataset_id: Optional[int] = None
-    parent_id: Optional[int] = None
+    dataset_id: int | None = None
+    parent_id: int | None = None
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     model_type: str
-    hyperparameters: Dict[str, Any]
-    preprocessing_config: Dict[str, Any]
-    feature_selection: List[str]
+    hyperparameters: dict[str, Any]
+    preprocessing_config: dict[str, Any]
+    feature_selection: list[str]
     target_column: str
     random_seed: int
     test_size: float
@@ -121,11 +123,11 @@ class ExperimentResponse(BaseModel):
     primary_metric: str
     status: str
     duration_ms: int
-    error_message: Optional[str] = None
-    dataset_fingerprint: Optional[str] = None
+    error_message: str | None = None
+    dataset_fingerprint: str | None = None
     created_at: datetime.datetime
-    metrics: List[ExperimentMetricResponse] = Field(default_factory=list)
-    artifacts: List[ExperimentArtifactResponse] = Field(default_factory=list)
+    metrics: list[ExperimentMetricResponse] = Field(default_factory=list)
+    artifacts: list[ExperimentArtifactResponse] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
@@ -137,21 +139,21 @@ class DiffItem(BaseModel):
     previous: Any
     current: Any
     changed: bool
-    impact_note: Optional[str] = None
+    impact_note: str | None = None
 
 class ExperimentDiffResponse(BaseModel):
-    experiment_a: Dict[str, Any]
-    experiment_b: Dict[str, Any]
-    diffs: List[DiffItem]
-    metrics_diff: List[Dict[str, Any]]
+    experiment_a: dict[str, Any]
+    experiment_b: dict[str, Any]
+    diffs: list[DiffItem]
+    metrics_diff: list[dict[str, Any]]
 
 class LineageNode(BaseModel):
     id: int
     name: str
-    parent_id: Optional[int]
+    parent_id: int | None
     model_type: str
     primary_metric: str
-    primary_metric_val: Optional[float]
+    primary_metric_val: float | None
     status: str
     created_at: datetime.datetime
     is_leader: bool = False
@@ -169,21 +171,21 @@ class ReproduceResponse(BaseModel):
     reproduced_successfully: bool
     within_tolerance: bool
     tolerance: float
-    original_metrics: Dict[str, float]
-    reproduced_metrics: Dict[str, float]
-    metric_differences: Dict[str, float]
+    original_metrics: dict[str, float]
+    reproduced_metrics: dict[str, float]
+    metric_differences: dict[str, float]
     message: str
 
 # --- AI Explanation Schemas ---
 class AIExplainRequest(BaseModel):
     experiment_id: int
-    baseline_experiment_id: Optional[int] = None
+    baseline_experiment_id: int | None = None
 
 class AIExplainResponse(BaseModel):
     summary: str
-    what_changed: List[str]
-    performance_shifts: List[str]
-    plausible_hypotheses: List[str]
-    risks_and_limitations: List[str]
-    suggested_next_experiments: List[str]
+    what_changed: list[str]
+    performance_shifts: list[str]
+    plausible_hypotheses: list[str]
+    risks_and_limitations: list[str]
+    suggested_next_experiments: list[str]
     provider: str  # offline_deterministic, openai, gemini

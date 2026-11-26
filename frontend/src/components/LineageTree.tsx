@@ -2,7 +2,7 @@ import React from 'react';
 import { LineageNode } from '../types';
 import { formatModelName } from '../utils/formatting';
 import { StatusBadge } from './StatusBadge';
-import { Crown, GitFork, ArrowRight, Unlink } from 'lucide-react';
+import { Crown, GitFork, Unlink } from 'lucide-react';
 
 interface LineageTreeProps {
   nodes: LineageNode[];

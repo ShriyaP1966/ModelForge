@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.entities import Experiment
 from app.schemas.schemas import AIExplainRequest, AIExplainResponse
-from app.services.visualization_service import VisualizationService
 from app.services.ai_explanation_service import AIExplanationService
+from app.services.visualization_service import VisualizationService
 
 router = APIRouter()
 

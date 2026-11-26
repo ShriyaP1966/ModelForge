@@ -1,11 +1,21 @@
+from typing import Any
+
 import numpy as np
-import pandas as pd
-from typing import Dict, Any, List, Optional
 from sklearn.metrics import (
-    accuracy_score, precision_score, recall_score, f1_score, roc_auc_score,
-    confusion_matrix, roc_curve, precision_recall_curve,
-    mean_absolute_error, mean_squared_error, r2_score, explained_variance_score
+    accuracy_score,
+    confusion_matrix,
+    explained_variance_score,
+    f1_score,
+    mean_absolute_error,
+    mean_squared_error,
+    precision_recall_curve,
+    precision_score,
+    r2_score,
+    recall_score,
+    roc_auc_score,
+    roc_curve,
 )
+
 
 class EvaluationEngine:
     """Computes comprehensive classification and regression metrics, curves, and overfitting diagnostics."""
@@ -17,16 +27,16 @@ class EvaluationEngine:
         y_train_pred: np.ndarray,
         y_val: np.ndarray,
         y_val_pred: np.ndarray,
-        y_val_proba: Optional[np.ndarray] = None,
-        classes: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
+        y_val_proba: np.ndarray | None = None,
+        classes: list[str] | None = None
+    ) -> dict[str, Any]:
         """Calculates classification metrics, confusion matrix, ROC/PR curves, and overfitting gap."""
         # Validation metrics
         val_acc = float(accuracy_score(y_val, y_val_pred))
         val_prec = float(precision_score(y_val, y_val_pred, average="weighted", zero_division=0))
         val_rec = float(recall_score(y_val, y_val_pred, average="weighted", zero_division=0))
         val_f1 = float(f1_score(y_val, y_val_pred, average="weighted", zero_division=0))
-        
+
         # Training metrics for overfitting gap
         train_acc = float(accuracy_score(y_train, y_train_pred))
         train_f1 = float(f1_score(y_train, y_train_pred, average="weighted", zero_division=0))
@@ -37,7 +47,7 @@ class EvaluationEngine:
         # actually observed in train/val when no explicit label encoder classes are
         # supplied (e.g. direct unit-test calls).
         if classes is not None:
-            full_label_ids: List[Any] = list(range(len(classes)))
+            full_label_ids: list[Any] = list(range(len(classes)))
             class_labels = [str(c) for c in classes]
         else:
             observed = sorted(set(np.unique(y_train).tolist()) | set(np.unique(y_val).tolist()))
@@ -141,7 +151,7 @@ class EvaluationEngine:
         y_train_pred: np.ndarray,
         y_val: np.ndarray,
         y_val_pred: np.ndarray
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Calculates regression metrics (MAE, MSE, RMSE, R²), residuals, and generalization gap."""
         val_mae = float(mean_absolute_error(y_val, y_val_pred))
         val_mse = float(mean_squared_error(y_val, y_val_pred))

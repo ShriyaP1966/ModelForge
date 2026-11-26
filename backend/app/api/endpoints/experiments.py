@@ -1,16 +1,12 @@
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.db.session import get_db
-from app.models.entities import Experiment, Project, Dataset
-from app.schemas.schemas import (
-    ExperimentCreate, ExperimentResponse, ExperimentDiffResponse,
-    LineageNode
-)
+from app.models.entities import Dataset, Experiment, Project
+from app.schemas.schemas import ExperimentCreate, ExperimentDiffResponse, ExperimentResponse, LineageNode
 from app.services.experiment_manager import ExperimentManager
 from app.services.visualization_service import VisualizationService
-from app.core.config import settings
 
 router = APIRouter()
 
@@ -115,7 +111,7 @@ def cancel_experiment(experiment_id: int, db: Session = Depends(get_db)):
     db.refresh(exp)
     return exp
 
-@router.get("/project/{project_id}", response_model=List[ExperimentResponse])
+@router.get("/project/{project_id}", response_model=list[ExperimentResponse])
 def get_project_experiments(project_id: int, db: Session = Depends(get_db)):
     return db.query(Experiment).filter(
         Experiment.project_id == project_id
@@ -137,7 +133,7 @@ def delete_experiment(experiment_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Experiment deleted successfully"}
 
-@router.get("/project/{project_id}/lineage", response_model=List[LineageNode])
+@router.get("/project/{project_id}/lineage", response_model=list[LineageNode])
 def get_project_lineage(project_id: int, db: Session = Depends(get_db)):
     return ExperimentManager.get_lineage(db=db, project_id=project_id)
 

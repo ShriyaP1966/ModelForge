@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatMetric, formatModelName } from '../utils/formatting';
+import { formatModelName } from '../utils/formatting';
 
 interface EvolutionPoint {
   id: number;
@@ -32,7 +32,6 @@ export const EvolutionChart: React.FC<EvolutionChartProps> = ({
   }
 
   const activeMetric = metricKey || timeline[0]?.primary_metric || 'f1';
-  const higherIsBetter = !['mae', 'mse', 'rmse'].includes(activeMetric.toLowerCase());
 
   // Extract points
   const points = timeline.map((exp, idx) => {

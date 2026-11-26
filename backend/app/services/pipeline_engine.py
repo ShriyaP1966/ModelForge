@@ -1,19 +1,33 @@
 import os
+from typing import Any
+
 import joblib
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, List, Tuple, Optional
-from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
+from sklearn.ensemble import (
+    GradientBoostingClassifier,
+    GradientBoostingRegressor,
+    RandomForestClassifier,
+    RandomForestRegressor,
+)
 from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, OneHotEncoder, OrdinalEncoder, LabelEncoder
-from sklearn.model_selection import train_test_split, KFold, StratifiedKFold, cross_val_score, learning_curve
-from sklearn.linear_model import LogisticRegression, LinearRegression, Ridge, Lasso
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, RandomForestRegressor, GradientBoostingRegressor
-from sklearn.svm import SVC
 from sklearn.inspection import permutation_importance
+from sklearn.linear_model import Lasso, LinearRegression, LogisticRegression, Ridge
+from sklearn.model_selection import KFold, StratifiedKFold, cross_val_score, learning_curve, train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import (
+    LabelEncoder,
+    MinMaxScaler,
+    OneHotEncoder,
+    OrdinalEncoder,
+    RobustScaler,
+    StandardScaler,
+)
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+
 
 class MLPipelineEngine:
     """Builds, trains, and evaluates leak-free scikit-learn pipelines."""
@@ -54,7 +68,7 @@ class MLPipelineEngine:
     }
 
     @classmethod
-    def get_supported_models(cls) -> Dict[str, List[str]]:
+    def get_supported_models(cls) -> dict[str, list[str]]:
         return {
             "classification": list(cls.CLASSIFICATION_MODELS.keys()),
             "regression": list(cls.REGRESSION_MODELS.keys())
@@ -63,8 +77,8 @@ class MLPipelineEngine:
     @classmethod
     def create_preprocessor(
         cls,
-        numeric_features: List[str],
-        categorical_features: List[str],
+        numeric_features: list[str],
+        categorical_features: list[str],
         imputer_strategy: str = "mean",
         scaler_type: str = "standard",
         encoder_type: str = "onehot"
@@ -77,7 +91,7 @@ class MLPipelineEngine:
             num_steps = []
             num_imp_strat = imputer_strategy if imputer_strategy in ["mean", "median", "most_frequent"] else "mean"
             num_steps.append(("imputer", SimpleImputer(strategy=num_imp_strat)))
-            
+
             if scaler_type == "standard":
                 num_steps.append(("scaler", StandardScaler()))
             elif scaler_type == "minmax":
@@ -85,7 +99,7 @@ class MLPipelineEngine:
             elif scaler_type == "robust":
                 num_steps.append(("scaler", RobustScaler()))
             # If none, no scaler step is added
-            
+
             numeric_pipe = Pipeline(steps=num_steps)
             transformers.append(("num", numeric_pipe, numeric_features))
 
@@ -93,12 +107,12 @@ class MLPipelineEngine:
         if categorical_features:
             cat_steps = []
             cat_steps.append(("imputer", SimpleImputer(strategy="most_frequent")))
-            
+
             if encoder_type == "onehot":
                 cat_steps.append(("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False)))
             else:
                 cat_steps.append(("encoder", OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)))
-                
+
             categorical_pipe = Pipeline(steps=cat_steps)
             transformers.append(("cat", categorical_pipe, categorical_features))
 
@@ -112,7 +126,7 @@ class MLPipelineEngine:
         cls,
         task_type: str,
         model_type: str,
-        hyperparameters: Dict[str, Any],
+        hyperparameters: dict[str, Any],
         random_seed: int = 42
     ):
         """Instantiate scikit-learn model with sanitized hyperparameters."""
@@ -123,7 +137,7 @@ class MLPipelineEngine:
             model_cls = cls.CLASSIFICATION_MODELS.get(norm_type)
             if not model_cls:
                 raise ValueError(f"Unsupported classification model: {model_type}")
-            
+
             # Inject random_state if supported
             if "random_state" not in params and norm_type in ["logistic_regression", "decision_tree", "random_forest", "svm", "gradient_boosting"]:
                 params["random_state"] = random_seed
@@ -137,7 +151,7 @@ class MLPipelineEngine:
             model_cls = cls.REGRESSION_MODELS.get(norm_type)
             if not model_cls:
                 raise ValueError(f"Unsupported regression model: {model_type}")
-            
+
             if "random_state" not in params and norm_type in ["decision_tree_regressor", "random_forest_regressor", "gradient_boosting_regressor", "ridge", "lasso"]:
                 params["random_state"] = random_seed
 
@@ -148,9 +162,9 @@ class MLPipelineEngine:
         cls,
         df: pd.DataFrame,
         target_column: str,
-        feature_columns: Optional[List[str]] = None,
+        feature_columns: list[str] | None = None,
         task_type: str = "classification"
-    ) -> Tuple[pd.DataFrame, np.ndarray, List[str], List[str], Optional[LabelEncoder]]:
+    ) -> tuple[pd.DataFrame, np.ndarray, list[str], list[str], LabelEncoder | None]:
         """Separate features and target, determine feature column types, and encode target if needed."""
         if target_column not in df.columns:
             raise ValueError(f"Target column '{target_column}' not found in dataset.")
@@ -177,7 +191,7 @@ class MLPipelineEngine:
             unique_targets = raw_y.unique()
             if len(unique_targets) < 2:
                 raise ValueError(f"Classification target must have at least 2 distinct classes. Found: {len(unique_targets)}")
-            
+
             label_encoder = LabelEncoder()
             y = label_encoder.fit_transform(raw_y.astype(str))
         else:
@@ -203,7 +217,7 @@ class MLPipelineEngine:
         return X, y, numeric_features, categorical_features, label_encoder
 
     @staticmethod
-    def _json_safe_round(value: float, digits: int = 4) -> Optional[float]:
+    def _json_safe_round(value: float, digits: int = 4) -> float | None:
         """Rounds a float for JSON output, converting NaN/inf to None. Both
         cross_val_score and learning_curve default to error_score=nan for a
         degenerate fold (e.g. a training slice too small/imbalanced to fit) --
@@ -222,14 +236,14 @@ class MLPipelineEngine:
         y: np.ndarray,
         task_type: str,
         model_type: str,
-        hyperparameters: Dict[str, Any],
-        preprocessing_config: Dict[str, Any],
-        num_features: List[str],
-        cat_features: List[str],
+        hyperparameters: dict[str, Any],
+        preprocessing_config: dict[str, Any],
+        num_features: list[str],
+        cat_features: list[str],
         primary_metric: str,
         requested_folds: int,
         random_seed: int
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Runs k-fold cross-validation on the primary metric, independently of
         the single train/val split used for the rest of the experiment's
         artifacts (confusion matrix, ROC curve, feature importance, etc). Never
@@ -334,13 +348,13 @@ class MLPipelineEngine:
         y: np.ndarray,
         task_type: str,
         model_type: str,
-        hyperparameters: Dict[str, Any],
-        preprocessing_config: Dict[str, Any],
-        num_features: List[str],
-        cat_features: List[str],
+        hyperparameters: dict[str, Any],
+        preprocessing_config: dict[str, Any],
+        num_features: list[str],
+        cat_features: list[str],
         primary_metric: str,
         random_seed: int
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Computes a train-size-vs-score learning curve for the primary metric,
         using a small fixed 3-fold split and 5 train-size fractions -- kept
         deliberately cheap (unlike cross-validation, this isn't user-configurable)
@@ -426,15 +440,15 @@ class MLPipelineEngine:
         target_column: str,
         task_type: str,
         model_type: str,
-        hyperparameters: Dict[str, Any],
-        preprocessing_config: Dict[str, Any],
-        feature_columns: Optional[List[str]] = None,
+        hyperparameters: dict[str, Any],
+        preprocessing_config: dict[str, Any],
+        feature_columns: list[str] | None = None,
         test_size: float = 0.2,
         random_seed: int = 42,
-        artifact_save_dir: Optional[str] = None,
+        artifact_save_dir: str | None = None,
         cross_validation_folds: int = 0,
         primary_metric: str = "f1"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Orchestrates end-to-end leak-free training and returns full metrics and artifacts."""
         X, y, num_features, cat_features, label_encoder = cls.prepare_data(
             df=df,
@@ -565,10 +579,10 @@ class MLPipelineEngine:
     @staticmethod
     def _extract_feature_importance(
         model: Any,
-        feature_names: List[str],
+        feature_names: list[str],
         X_val: Any,
         y_val: Any
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Extract or compute feature importances."""
         importances = []
         try:

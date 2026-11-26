@@ -6,11 +6,6 @@ import { ErrorBanner } from '../components/ErrorBanner';
 import {
   ArrowLeft,
   Sliders,
-  Cpu,
-  Database,
-  Filter,
-  Layers,
-  Sparkles,
   GitFork,
   Play,
   RotateCcw,

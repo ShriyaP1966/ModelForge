@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dataset, DatasetHealthReport } from '../types';
 import { api } from '../services/api';
 import { CorrelationHeatmap } from '../components/CorrelationHeatmap';
@@ -7,14 +7,11 @@ import { FeatureDistributionChart } from '../components/FeatureDistributionChart
 import { ErrorBanner } from '../components/ErrorBanner';
 import {
   ArrowLeft,
-  Database,
-  AlertTriangle,
   CheckCircle2,
   ShieldAlert,
   BarChart2,
   Upload,
   Activity,
-  Layers,
   FileSpreadsheet,
   Grid3x3,
   ScanSearch,

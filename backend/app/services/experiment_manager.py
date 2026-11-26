@@ -1,15 +1,16 @@
-import time
 import threading
-from typing import Dict, Any, List, Optional
-from sqlalchemy.orm import Session
-import pandas as pd
+import time
+from typing import Any
 
-from app.models.entities import Experiment, ExperimentMetric, ExperimentArtifact, Dataset, Project
-from app.services.dataset_analyzer import calculate_file_sha256, load_dataset
-from app.services.pipeline_engine import MLPipelineEngine
-from app.services.evaluation_engine import EvaluationEngine
+from sqlalchemy.orm import Session
+
 from app.core.config import settings
 from app.db.session import SessionLocal
+from app.models.entities import Dataset, Experiment, ExperimentArtifact, ExperimentMetric, Project
+from app.services.dataset_analyzer import calculate_file_sha256, load_dataset
+from app.services.evaluation_engine import EvaluationEngine
+from app.services.pipeline_engine import MLPipelineEngine
+
 
 class ExperimentManager:
     """Manages experiment creation, background execution, persistence, and lineage tracking."""
@@ -18,8 +19,8 @@ class ExperimentManager:
     # by experiment id. A plain dict is sufficient here (single-process,
     # student-laptop app, no multi-worker deployment) -- this is deliberately
     # not backed by any external queue/broker.
-    _cancel_events: Dict[int, threading.Event] = {}
-    _timers: Dict[int, threading.Timer] = {}
+    _cancel_events: dict[int, threading.Event] = {}
+    _timers: dict[int, threading.Timer] = {}
     _registry_lock = threading.Lock()
 
     @classmethod
@@ -67,7 +68,7 @@ class ExperimentManager:
         cls,
         db: Session,
         experiment_id: int,
-        cancel_event: Optional[threading.Event] = None
+        cancel_event: threading.Event | None = None
     ) -> Experiment:
         """Executes an experiment, records its metrics, artifacts, and updates status.
 
@@ -163,7 +164,7 @@ class ExperimentManager:
             # 5. Persist Metrics
             # Clear existing metrics for this experiment if any
             db.query(ExperimentMetric).filter(ExperimentMetric.experiment_id == exp.id).delete()
-            
+
             for m_name, m_val in eval_result["validation_metrics"].items():
                 db.add(ExperimentMetric(
                     experiment_id=exp.id,
@@ -266,7 +267,7 @@ class ExperimentManager:
         return exp
 
     @classmethod
-    def get_lineage(cls, db: Session, project_id: int) -> List[Dict[str, Any]]:
+    def get_lineage(cls, db: Session, project_id: int) -> list[dict[str, Any]]:
         """Constructs experiment lineage tree with primary metric leader identification.
 
         Includes every experiment in the project regardless of status. Earlier
@@ -332,7 +333,7 @@ class ExperimentManager:
         return node_list
 
     @classmethod
-    def get_evolution_timeline(cls, db: Session, project_id: int) -> List[Dict[str, Any]]:
+    def get_evolution_timeline(cls, db: Session, project_id: int) -> list[dict[str, Any]]:
         """Returns ordered sequential experiment timeline for evolution charts and replay."""
         experiments = db.query(Experiment).filter(
             Experiment.project_id == project_id,
@@ -343,7 +344,7 @@ class ExperimentManager:
         for exp in experiments:
             val_metrics = {m.metric_name: m.metric_value for m in exp.metrics if m.split == "val"}
             train_metrics = {m.metric_name: m.metric_value for m in exp.metrics if m.split == "train"}
-            
+
             # Find overfitting note if exists
             overfit_art = next((a for a in exp.artifacts if a.artifact_type == "overfitting"), None)
             overfit_data = overfit_art.data if overfit_art else {}

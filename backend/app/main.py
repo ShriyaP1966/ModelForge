@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.api import api_router
+from app.api.endpoints.projects import seed_sample_projects
 from app.core.config import settings
 from app.db.base import Base
-from app.db.session import engine, SessionLocal
-from app.api.api import api_router
+from app.db.session import SessionLocal, engine
 from app.models.entities import Project
-from app.api.endpoints.projects import seed_sample_projects
 
 # Initialize database schema
 Base.metadata.create_all(bind=engine)

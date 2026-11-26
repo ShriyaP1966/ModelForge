@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { Settings, ShieldCheck, Cpu, HardDrive, Key, Save, CheckCircle2, Lock } from 'lucide-react';
+import { Settings, ShieldCheck, Cpu, HardDrive, Save, CheckCircle2, Lock } from 'lucide-react';
 
 interface SettingsPageProps {
   onBack: () => void;

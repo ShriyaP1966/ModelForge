@@ -41,7 +41,7 @@ export function App() {
 
   const activeProject = projects.find((p) => p.id === selectedProjectId);
 
-  const handleNavigate = (view: string, id?: number) => {
+  const handleNavigate = (view: string, _id?: number) => {
     setCurrentView(view);
     if (view === 'dashboard') {
       setSelectedProjectId(null);

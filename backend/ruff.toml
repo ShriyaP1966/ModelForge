@@ -1,0 +1,15 @@
+line-length = 120
+target-version = "py313"
+extend-exclude = ["venv"]
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+# E501: long lines are tolerated. B008: FastAPI's Depends()/File() in
+# argument defaults is the framework's standard idiom.
+ignore = ["E501", "B008"]
+
+[lint.per-file-ignores]
+# Re-exports the schema module on purpose.
+"app/schemas/__init__.py" = ["F403"]
+# The test environment must be configured before any app module is imported.
+"tests/conftest.py" = ["E402"]
