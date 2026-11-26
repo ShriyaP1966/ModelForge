@@ -9,6 +9,7 @@ from app.db.session import get_db
 from app.models.entities import Dataset, Experiment, Project
 from app.schemas.schemas import ProjectCreate, ProjectResponse
 from app.services.dataset_analyzer import DatasetAnalyzer, calculate_file_sha256, load_dataset
+from app.services.demo_seed import start_background_seeding
 
 router = APIRouter()
 
@@ -151,5 +152,8 @@ def seed_sample_projects(db: Session = Depends(get_db)):
             db.commit()
 
         created.append(proj.name)
+
+    # Sample experiments train in the background so this request returns promptly.
+    start_background_seeding()
 
     return {"message": "Sample projects initialized", "projects": created}
