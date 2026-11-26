@@ -136,7 +136,7 @@ def seed_sample_experiments(db: Session) -> list[int]:
                     random_seed=42,
                     test_size=0.25,
                     cross_validation_folds=run.get("cross_validation_folds", 0),
-                    primary_metric="f1" if is_classification else "rmse",
+                    primary_metric="roc_auc" if is_classification else "rmse",
                     status="queued",
                 )
                 db.add(exp)
